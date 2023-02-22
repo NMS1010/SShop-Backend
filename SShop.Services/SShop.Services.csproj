@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Mailjet.Api" Version="3.0.0" />
+		<PackageReference Include="PayPal" Version="1.9.1" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\SShop.ViewModels\SShop.ViewModels.csproj" />
+	</ItemGroup>
+
+</Project>
