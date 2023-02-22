@@ -24,6 +24,7 @@ using SShop.Services.FileStorage;
 using SShop.Services.MailJet;
 using SShop.ViewModels.System.Users;
 using SShop.Utilities.Constants.Systems;
+using SShop.BackEndAPI.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -162,6 +163,7 @@ if (env.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+app.UseMiddleware<ErrorHandlerMiddleware>();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseSession();
@@ -184,5 +186,4 @@ app.UseEndpoints(endpoints =>
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
 });
-
 app.Run();
