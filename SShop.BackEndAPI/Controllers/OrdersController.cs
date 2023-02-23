@@ -11,18 +11,18 @@ namespace SShop.BackEndAPI.Controllers
     [Authorize]
     public class OrdersController : ControllerBase
     {
-        private readonly IOrderRepository _orderServices;
+        private readonly IOrderRepository _orderRepository;
 
-        public OrdersController(IOrderRepository orderServices)
+        public OrdersController(IOrderRepository orderRepository)
         {
-            _orderServices = orderServices;
+            _orderRepository = orderRepository;
         }
 
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RetrieveAll([FromQuery] OrderGetPagingRequest request)
         {
-            var orders = await _orderServices.RetrieveAll(request);
+            var orders = await _orderRepository.RetrieveAll(request);
 
             if (orders == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get order list"));
@@ -33,7 +33,7 @@ namespace SShop.BackEndAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RetrieveOrderOverviewStatictis()
         {
-            var statictis = await _orderServices.GetOverviewStatictis();
+            var statictis = await _orderRepository.GetOverviewStatictis();
 
             if (statictis == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get orders statictis overview"));
@@ -43,7 +43,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpGet("{orderId}")]
         public async Task<IActionResult> RetrieveById(int orderId)
         {
-            var order = await _orderServices.RetrieveById(orderId);
+            var order = await _orderRepository.RetrieveById(orderId);
 
             if (order == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot found this order"));
@@ -53,7 +53,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> Create([FromForm] OrderCreateRequest request)
         {
-            var orderId = await _orderServices.Create(request);
+            var orderId = await _orderRepository.Create(request);
 
             if (orderId <= 0)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot create this order"));
@@ -65,7 +65,7 @@ namespace SShop.BackEndAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update([FromForm] OrderUpdateRequest request)
         {
-            var count = await _orderServices.Update(request);
+            var count = await _orderRepository.Update(request);
 
             if (count <= 0)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot update this order"));

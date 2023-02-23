@@ -7,7 +7,13 @@ namespace SShop.Repositories.System.Users
 {
     public interface IUserRepository
     {
-        Task<string> Authenticate(LoginRequest request);
+        Task<TokenViewModel> Authenticate(LoginRequest request);
+
+        Task<TokenViewModel> RefreshToken(TokenViewModel request);
+
+        Task RevokeToken(string userId);
+
+        Task RevokeAllToken();
 
         Task<string> AuthenticateWithGoogle(string email, string loginProvider, string providerKey);
 

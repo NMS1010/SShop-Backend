@@ -1,4 +1,6 @@
-﻿using SShop.ViewModels.Common;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using SShop.ViewModels.Common;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text.Json;
@@ -23,15 +25,17 @@ namespace SShop.BackEndAPI.Middlewares
                 var response = new CustomAPIResponse<NoContentAPIResponse>();
                 response.StatusCode = error switch
                 {
+                    AccessViolationException e => (int)HttpStatusCode.OK,
                     KeyNotFoundException e => (int)HttpStatusCode.NotFound,
                     ApplicationException e => (int)HttpStatusCode.BadRequest,
+                    SecurityTokenException e => (int)HttpStatusCode.BadRequest,
                     UnauthorizedAccessException e => (int)HttpStatusCode.Unauthorized,
                     ValidationException e => (int)HttpStatusCode.BadRequest,
                     _ => (int)(HttpStatusCode.InternalServerError),
                 };
                 response.IsSuccess = false;
                 response.Errors = new List<string> { error.Message };
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+                await context.Response.WriteAsJsonAsync(response);
             }
         }
     }

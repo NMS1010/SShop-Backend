@@ -11,40 +11,59 @@ namespace SShop.BackEndAPI.Controllers
     [Authorize(Roles = "Admin,Customer")]
     public class UsersController : ControllerBase
     {
-        private readonly IUserRepository _userService;
+        private readonly IUserRepository _userRepository;
 
-        public UsersController(IUserRepository userService)
+        public UsersController(IUserRepository userRepository)
         {
-            _userService = userService;
+            _userRepository = userRepository;
         }
 
-        [Route("login")]
-        [HttpPost]
+        [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromForm] LoginRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var resToken = await _userService.Authenticate(request);
-            if (string.IsNullOrEmpty(resToken))
-            {
-                return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status200OK, "Username/password is incorrect"));
-            }
-            if (resToken == "banned")
-                return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status200OK, "Your account has been banned"));
-            if (resToken == "unconfirm")
-                return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status200OK, "Your account hasn't been confirmed"));
-            return Ok(CustomAPIResponse<string>.Success(resToken, StatusCodes.Status200OK));
+            var resToken = await _userRepository.Authenticate(request);
+            return Ok(CustomAPIResponse<TokenViewModel>.Success(resToken, StatusCodes.Status200OK));
         }
 
-        [Route("google-login")]
-        [HttpPost]
+        [HttpPost("refresh-token")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RefreshToken([FromForm] TokenViewModel request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            var resToken = await _userRepository.RefreshToken(request);
+            return Ok(CustomAPIResponse<TokenViewModel>.Success(resToken, StatusCodes.Status200OK));
+        }
+
+        [HttpPost("revoke-token/{userId}")]
+        public async Task<IActionResult> RevokeToken(string userId)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            await _userRepository.RevokeToken(userId);
+            return Ok(CustomAPIResponse<string>.Success("Revoke token for this user successfully", StatusCodes.Status200OK));
+        }
+
+        [HttpPost("revoke-all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RevokeAllToken()
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            await _userRepository.RevokeAllToken();
+            return Ok(CustomAPIResponse<string>.Success("Revoke token for all user successfully", StatusCodes.Status200OK));
+        }
+
+        [HttpPost("google-login")]
         [AllowAnonymous]
         public async Task<IActionResult> LoginWithGoogle([FromForm] string email, [FromForm] string loginProvider, [FromForm] string providerKey)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var resToken = await _userService.AuthenticateWithGoogle(email, loginProvider, providerKey);
+            var resToken = await _userRepository.AuthenticateWithGoogle(email, loginProvider, providerKey);
             if (string.IsNullOrEmpty(resToken))
             {
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "error"));
@@ -52,14 +71,13 @@ namespace SShop.BackEndAPI.Controllers
             return Ok(CustomAPIResponse<string>.Success(resToken, StatusCodes.Status200OK));
         }
 
-        [Route("register")]
-        [HttpPost]
+        [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromForm] RegisterRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            (var res, var status) = await _userService.Register(request);
+            (var res, var status) = await _userRepository.Register(request);
             if (!res)
             {
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, status));
@@ -71,7 +89,7 @@ namespace SShop.BackEndAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RetrieveAll([FromQuery] UserGetPagingRequest request)
         {
-            var res = await _userService.RetrieveAll(request);
+            var res = await _userRepository.RetrieveAll(request);
             if (res.Items?.Count == 0)
                 return NotFound(CustomAPIResponse<PagedResult<NoContentAPIResponse>>.Fail(StatusCodes.Status404NotFound, "Cannot get user list"));
             return Ok(CustomAPIResponse<PagedResult<UserViewModel>>.Success(res, StatusCodes.Status200OK));
@@ -80,7 +98,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpGet("{userId}")]
         public async Task<IActionResult> RetrieveById(string userId)
         {
-            var res = await _userService.RetrieveById(userId);
+            var res = await _userRepository.RetrieveById(userId);
             if (res == null)
                 return NotFound(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot find this user"));
             return Ok(CustomAPIResponse<UserViewModel>.Success(res, StatusCodes.Status200OK));
@@ -89,7 +107,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> Update([FromForm] UserUpdateRequest request)
         {
-            (var res, var status) = await _userService.Update(request);
+            (var res, var status) = await _userRepository.Update(request);
             if (!res)
             {
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, status));
@@ -101,7 +119,7 @@ namespace SShop.BackEndAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(string userId)
         {
-            var count = await _userService.Delete(userId);
+            var count = await _userRepository.Delete(userId);
             if (count <= 0)
             {
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot delete this user"));
@@ -113,7 +131,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RegisterConfirm([FromQuery] string email, [FromQuery] string token)
         {
-            var res = await _userService.VerifyToken(email, token);
+            var res = await _userRepository.VerifyToken(email, token);
             if (!res)
                 return Ok(CustomAPIResponse<string>.Success("confirm-error", StatusCodes.Status400BadRequest));
             return Ok(CustomAPIResponse<string>.Success("confirm-success", StatusCodes.Status200OK));
@@ -123,7 +141,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> CheckEmail([FromQuery] string email)
         {
-            var res = await _userService.CheckEmail(email);
+            var res = await _userRepository.CheckEmail(email);
             if (!res)
                 return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
             return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
@@ -133,7 +151,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromForm] string email, [FromForm] string host)
         {
-            var res = await _userService.ForgotPassword(email, host);
+            var res = await _userRepository.ForgotPassword(email, host);
             if (!res)
                 return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
             return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
@@ -143,7 +161,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromForm] string email, [FromForm] string token, [FromForm] string password)
         {
-            var res = await _userService.VerifyForgotPasswordToken(email, token, password);
+            var res = await _userRepository.VerifyForgotPasswordToken(email, token, password);
             if (!res)
                 return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
             return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
@@ -153,7 +171,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> CheckNewUser(UserCheckNewRequest request)
         {
-            var res = await _userService.CheckNewUser(request);
+            var res = await _userRepository.CheckNewUser(request);
             if (res.Count > 0)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status200OK, res));
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));
@@ -163,7 +181,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> CheckEditUser(UserCheckEditRequest request)
         {
-            var res = await _userService.CheckEditUser(request);
+            var res = await _userRepository.CheckEditUser(request);
             if (res.Count > 0)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status200OK, res));
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));

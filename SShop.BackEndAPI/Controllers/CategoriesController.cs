@@ -12,18 +12,18 @@ namespace SShop.BackEndAPI.Controllers
     [Authorize(Roles = "Admin")]
     public class CategoriesController : ControllerBase
     {
-        private readonly ICategoryRepository _categoryService;
+        private readonly ICategoryRepository _categoryRepository;
 
-        public CategoriesController(ICategoryRepository categoryService)
+        public CategoriesController(ICategoryRepository categoryRepository)
         {
-            _categoryService = categoryService;
+            _categoryRepository = categoryRepository;
         }
 
         [HttpGet("all")]
         [AllowAnonymous]
         public async Task<IActionResult> RetrieveAll([FromQuery] CategoryGetPagingRequest request)
         {
-            var categories = await _categoryService.RetrieveAll(request);
+            var categories = await _categoryRepository.RetrieveAll(request);
             if (categories == null)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get categories list"));
             return Ok(CustomAPIResponse<PagedResult<CategoryViewModel>>.Success(categories, StatusCodes.Status200OK));
@@ -33,7 +33,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RetrieveParentCategories()
         {
-            var categories = await _categoryService.GetParentCategory();
+            var categories = await _categoryRepository.GetParentCategory();
             if (categories == null)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get parent categories list"));
             return Ok(CustomAPIResponse<PagedResult<CategoryViewModel>>.Success(categories, StatusCodes.Status200OK));
@@ -42,7 +42,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpGet("{categoryId}")]
         public async Task<IActionResult> RetrieveById(int categoryId)
         {
-            var category = await _categoryService.RetrieveById(categoryId);
+            var category = await _categoryRepository.RetrieveById(categoryId);
             if (category == null)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot find this caterogy"));
             return Ok(CustomAPIResponse<CategoryViewModel>.Success(category, StatusCodes.Status200OK));
@@ -53,10 +53,10 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return Ok(ModelState);
-            var categoryId = await _categoryService.Create(request);
+            var categoryId = await _categoryRepository.Create(request);
             if (categoryId <= 0)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot create this caterogy"));
-            //var category = await _categoryService.RetrieveById(categoryId);
+            //var category = await _categoryRepository.RetrieveById(categoryId);
 
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status201Created));
         }
@@ -66,7 +66,7 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return Ok(ModelState);
-            var count = await _categoryService.Update(request);
+            var count = await _categoryRepository.Update(request);
             if (count <= 0)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot update this caterogy"));
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));
@@ -75,7 +75,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpDelete("delete/{categoryId}")]
         public async Task<IActionResult> Delete(int categoryId)
         {
-            int records = await _categoryService.Delete(categoryId);
+            int records = await _categoryRepository.Delete(categoryId);
             if (records <= 0)
                 return Ok(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot delete this caterogy"));
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));

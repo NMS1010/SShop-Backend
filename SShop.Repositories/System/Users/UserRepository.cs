@@ -17,6 +17,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using SShop.Services.MailJet;
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.Logging;
 
 namespace SShop.Repositories.System.Users
 {
@@ -74,20 +76,78 @@ namespace SShop.Repositories.System.Users
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public async Task<string> Authenticate(LoginRequest request)
+        public static string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
+        private ClaimsPrincipal ValidateExpiredJWT(string jwt)
+        {
+            IdentityModelEventSource.ShowPII = true;
+
+            TokenValidationParameters validationParameters = new()
+            {
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidAudience = _configuration["Tokens:Issuer"],
+                ValidIssuer = _configuration["Tokens:Issuer"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Tokens:Key"]))
+            };
+
+            ClaimsPrincipal principal = new JwtSecurityTokenHandler().ValidateToken(jwt, validationParameters, out SecurityToken validatedToken);
+            if (validatedToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                return null;
+            return principal;
+        }
+
+        public async Task<TokenViewModel> RefreshToken(TokenViewModel request)
+        {
+            var userPrincipal = ValidateExpiredJWT(request.AccessToken);
+            if (userPrincipal is null)
+            {
+                throw new SecurityTokenException("Invalid access token");
+            }
+            var userName = userPrincipal.Identity.Name;
+            var user = await _userManager.FindByNameAsync(userName);
+            if (user is null || user.RefreshToken != request.RefreshToken || user.RefreshTokenExpiredTime <= DateTime.Now)
+            {
+                throw new SecurityTokenException("Invalid access token or refresh token");
+            }
+            var newAccessToken = await WriteJWT(user);
+            var newRefreshToken = GenerateRefreshToken();
+            user.RefreshToken = newRefreshToken;
+            await _userManager.UpdateAsync(user);
+
+            return new TokenViewModel { AccessToken = newAccessToken, RefreshToken = newRefreshToken };
+        }
+
+        public async Task<TokenViewModel> Authenticate(LoginRequest request)
         {
             var user = await _userManager.FindByNameAsync(request.UserName);
             if (user == null)
-                return null;
+                throw new KeyNotFoundException("Username/password is incorrect");
             var res = await _signInManager.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
+            if (res.IsLockedOut)
+            {
+                throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
+            }
             if (!res.Succeeded)
-                return null;
+                throw new KeyNotFoundException("Username/password is incorrect");
             if (user.Status == USER_STATUS.IN_ACTIVE)
-                return "banned";
+                throw new AccessViolationException("Your account has been banned");
             if (!user.EmailConfirmed)
-                return "unconfirm";
+                throw new AccessViolationException("Your account hasn't been confirmed");
 
-            return await WriteJWT(user);
+            string accessToken = await WriteJWT(user);
+            string refreshToken = GenerateRefreshToken();
+            DateTime refreshTokenExpiredTime = DateTime.Now.AddDays(7);
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiredTime = refreshTokenExpiredTime;
+            await _userManager.UpdateAsync(user);
+            return new TokenViewModel { AccessToken = accessToken, RefreshToken = refreshToken };
         }
 
         public async Task<(bool, string)> Register(RegisterRequest request)
@@ -478,6 +538,24 @@ namespace SShop.Repositories.System.Users
             if (result.Succeeded)
                 return true;
             return false;
+        }
+
+        public async Task RevokeToken(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) throw new KeyNotFoundException("User not found");
+            user.RefreshToken = null;
+            await _userManager.UpdateAsync(user);
+        }
+
+        public async Task RevokeAllToken()
+        {
+            var users = _userManager.Users.ToList();
+            foreach (var user in users)
+            {
+                user.RefreshToken = null;
+                await _userManager.UpdateAsync(user);
+            }
         }
     }
 }
