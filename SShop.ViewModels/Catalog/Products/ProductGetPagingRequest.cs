@@ -6,7 +6,7 @@ namespace SShop.ViewModels.Catalog.Products
     {
         public decimal MinPrice { get; set; } = 0;
         public decimal MaxPrice { get; set; } = decimal.MaxValue;
-        public int CategoryId { get; set; } = 0;
-        public int BrandId { get; set; } = 0;
+        public int[] CategoryIds { get; set; }
+        public int[] BrandIds { get; set; }
     }
 }

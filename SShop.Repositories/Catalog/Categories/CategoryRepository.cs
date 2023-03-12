@@ -4,6 +4,7 @@ using SShop.ViewModels.Catalog.Categories;
 using SShop.ViewModels.Common;
 using Microsoft.EntityFrameworkCore;
 using SShop.Services.FileStorage;
+using System.Xml.Linq;
 
 namespace SShop.Repositories.Catalog.Categories
 {
@@ -59,6 +60,21 @@ namespace SShop.Repositories.Catalog.Categories
             }
         }
 
+        public CategoryViewModel GetCategoryViewModel(Category category)
+        {
+            return new CategoryViewModel()
+            {
+                CategoryId = category.CategoryId,
+                Name = category.Name,
+                ParentCategoryId = category.ParentCategoryId ?? null,
+                ParentCategoryName = _context.Categories.Find(category.ParentCategoryId)?.Name,
+                Content = category.Content,
+                Image = category.Image,
+                SubCategories = GetSubCategory(category.CategoryId),
+                TotalProduct = category.Products.Count
+            };
+        }
+
         public async Task<PagedResult<CategoryViewModel>> GetParentCategory()
         {
             try
@@ -68,17 +84,7 @@ namespace SShop.Repositories.Catalog.Categories
                     .Include(x => x.Products)
                     .ToListAsync();
                 var data = query
-                    .Select(x => new CategoryViewModel()
-                    {
-                        CategoryId = x.CategoryId,
-                        Name = x.Name,
-                        ParentCategoryId = x.ParentCategoryId ?? null,
-                        ParentCategoryName = _context.Categories.Find(x.ParentCategoryId)?.Name,
-                        Content = x.Content,
-                        Image = x.Image,
-                        SubCategories = GetSubCategory(x.CategoryId),
-                        TotalProduct = x.Products.Count
-                    }).ToList();
+                    .Select(x => GetCategoryViewModel(x)).ToList();
 
                 return new PagedResult<CategoryViewModel>
                 {
@@ -105,17 +111,7 @@ namespace SShop.Repositories.Catalog.Categories
                     return res;
                 subCategories.ForEach(x =>
                 {
-                    res.Add(new CategoryViewModel()
-                    {
-                        CategoryId = x.CategoryId,
-                        Content = x.Content,
-                        ParentCategoryId = x.ParentCategoryId,
-                        Image = x.Image,
-                        Name = x.Name,
-                        ParentCategoryName = _context.Categories.Find(x.ParentCategoryId)?.Name,
-                        TotalProduct = x.Products.Count,
-                        SubCategories = GetSubCategory(x.CategoryId)
-                    });
+                    res.Add(GetCategoryViewModel(x));
                 });
 
                 return res;
@@ -139,17 +135,7 @@ namespace SShop.Repositories.Catalog.Categories
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new CategoryViewModel()
-                    {
-                        CategoryId = x.CategoryId,
-                        Name = x.Name,
-                        ParentCategoryId = x.ParentCategoryId ?? null,
-                        ParentCategoryName = _context.Categories.Find(x.ParentCategoryId)?.Name,
-                        Content = x.Content,
-                        Image = x.Image,
-                        SubCategories = GetSubCategory(x.CategoryId),
-                        TotalProduct = x.Products.Count
-                    }).ToList();
+                    .Select(x => GetCategoryViewModel(x)).ToList();
 
                 return new PagedResult<CategoryViewModel>
                 {
@@ -173,17 +159,7 @@ namespace SShop.Repositories.Catalog.Categories
                     .FirstOrDefaultAsync();
                 if (category == null)
                     return null;
-                return new CategoryViewModel()
-                {
-                    CategoryId = categoryId,
-                    Name = category.Name,
-                    ParentCategoryId = category.ParentCategoryId ?? null,
-                    ParentCategoryName = _context.Categories.Find(category.ParentCategoryId)?.Name,
-                    Content = category.Content,
-                    Image = category.Image,
-                    SubCategories = GetSubCategory(category.CategoryId),
-                    TotalProduct = category.Products.Count
-                };
+                return GetCategoryViewModel(category);
             }
             catch { return null; }
         }

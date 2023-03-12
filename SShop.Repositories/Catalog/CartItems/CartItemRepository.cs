@@ -132,6 +132,25 @@ namespace SShop.Repositories.Catalog.CartItems
             }
         }
 
+        public CartItemViewModel GetCartItemViewModel(CartItem cartItem)
+        {
+            return new CartItemViewModel()
+            {
+                CartItemId = cartItem.CartItemId,
+                ProductId = cartItem.ProductId,
+                ProductName = cartItem.Product.Name,
+                ImageProduct = cartItem.Product.ProductImages
+                            .Where(c => c.ProductId == cartItem.ProductId && c.IsDefault == true)
+                            .FirstOrDefault()?.Path,
+                Quantity = cartItem.Quantity,
+                TotalPrice = cartItem.Quantity * cartItem.Product.Price,
+                UnitPrice = cartItem.Product.Price,
+                DateAdded = DateTime.Now,
+                Status = cartItem.Status,
+                ProductStatus = PRODUCT_STATUS.ProductStatus[cartItem.Product.Status]
+            };
+        }
+
         public async Task<PagedResult<CartItemViewModel>> RetrieveAll(CartItemGetPagingRequest request)
         {
             try
@@ -150,21 +169,7 @@ namespace SShop.Repositories.Catalog.CartItems
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new CartItemViewModel()
-                    {
-                        CartItemId = x.CartItemId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ImageProduct = x.Product.ProductImages
-                            .Where(c => c.ProductId == x.ProductId && c.IsDefault == true)
-                            .FirstOrDefault()?.Path,
-                        Quantity = x.Quantity,
-                        TotalPrice = x.Quantity * x.Product.Price,
-                        UnitPrice = x.Product.Price,
-                        DateAdded = DateTime.Now,
-                        Status = x.Status,
-                        ProductStatus = PRODUCT_STATUS.ProductStatus[x.Product.Status]
-                    }).ToList();
+                    .Select(x => GetCartItemViewModel(x)).ToList();
 
                 return new PagedResult<CartItemViewModel>
                 {
@@ -190,21 +195,7 @@ namespace SShop.Repositories.Catalog.CartItems
                     .FirstOrDefaultAsync();
                 if (cartItem == null)
                     return null;
-                return new CartItemViewModel()
-                {
-                    CartItemId = cartItem.CartItemId,
-                    ProductId = cartItem.ProductId,
-                    ProductName = cartItem.Product.Name,
-                    ImageProduct = cartItem.Product.ProductImages
-                        .Where(x => x.ProductId == cartItem.ProductId && x.IsDefault == true)
-                        .FirstOrDefault()?.Path,
-                    Quantity = cartItem.Quantity,
-                    TotalPrice = cartItem.Quantity * cartItem.Product.Price,
-                    UnitPrice = cartItem.Product.Price,
-                    DateAdded = DateTime.Now,
-                    Status = cartItem.Status,
-                    ProductStatus = PRODUCT_STATUS.ProductStatus[cartItem.Product.Status]
-                };
+                return GetCartItemViewModel(cartItem);
             }
             catch
             {
@@ -223,21 +214,7 @@ namespace SShop.Repositories.Catalog.CartItems
                     .ThenInclude(x => x.ProductImages)
                     .ToListAsync();
                 var data = query
-                    .Select(x => new CartItemViewModel()
-                    {
-                        CartItemId = x.CartItemId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ImageProduct = x.Product.ProductImages
-                            .Where(c => c.ProductId == x.ProductId && c.IsDefault == true)
-                            .FirstOrDefault()?.Path,
-                        Quantity = x.Quantity,
-                        TotalPrice = x.Quantity * x.Product.Price,
-                        UnitPrice = x.Product.Price,
-                        DateAdded = DateTime.Now,
-                        Status = x.Status,
-                        ProductStatus = PRODUCT_STATUS.ProductStatus[x.Product.Status]
-                    }).ToList();
+                    .Select(x => GetCartItemViewModel(x)).ToList();
 
                 return new PagedResult<CartItemViewModel>()
                 {

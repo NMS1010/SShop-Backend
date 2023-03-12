@@ -70,7 +70,7 @@ namespace SShop.Repositories.System.Users
             var token = new JwtSecurityToken(_configuration["Tokens:Issuer"],
                 _configuration["Tokens:Issuer"],
                 claims,
-                expires: DateTime.Now.AddMinutes(30),
+                expires: DateTime.Now.AddMinutes(10),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -130,10 +130,10 @@ namespace SShop.Repositories.System.Users
             if (user == null)
                 throw new KeyNotFoundException("Username/password is incorrect");
             var res = await _signInManager.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
-            if (res.IsLockedOut)
-            {
-                throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
-            }
+            //if (res.IsLockedOut)
+            //{
+            //    throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
+            //}
             if (!res.Succeeded)
                 throw new KeyNotFoundException("Username/password is incorrect");
             if (user.Status == USER_STATUS.IN_ACTIVE)

@@ -11,10 +11,12 @@ namespace SShop.Repositories.System.Roles
     public class RoleRepository : IRoleRepository
     {
         private readonly AppDbContext _context;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public RoleRepository(AppDbContext context)
+        public RoleRepository(AppDbContext context, RoleManager<IdentityRole> roleManager)
         {
             _context = context;
+            _roleManager = roleManager;
         }
 
         public async Task<int> Create(RoleCreateRequest request)
@@ -25,8 +27,7 @@ namespace SShop.Repositories.System.Roles
                 {
                     Name = request.RoleName
                 };
-                _context.Roles.Add(role);
-                await _context.SaveChangesAsync();
+                await _roleManager.CreateAsync(role);
                 return 1;
             }
             catch
@@ -40,7 +41,7 @@ namespace SShop.Repositories.System.Roles
             try
             {
                 var role = await _context.Roles.FindAsync(id);
-                _context.Roles.Remove(role);
+                await _roleManager.DeleteAsync(role);
                 await _context.SaveChangesAsync();
                 return 1;
             }
@@ -107,7 +108,7 @@ namespace SShop.Repositories.System.Roles
             {
                 var role = await _context.Roles.FindAsync(request.RoleId);
                 role.Name = request.RoleName;
-                _context.Roles.Update(role);
+                await _roleManager.UpdateAsync(role);
                 return await _context.SaveChangesAsync();
             }
             catch

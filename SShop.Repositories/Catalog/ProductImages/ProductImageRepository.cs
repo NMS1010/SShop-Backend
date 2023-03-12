@@ -68,6 +68,17 @@ namespace SShop.Repositories.Catalog.ProductImages
             }
         }
 
+        public ProductImageViewModel GetProductImageViewModel(ProductImage productImage)
+        {
+            return new ProductImageViewModel()
+            {
+                Id = productImage.Id,
+                IsDefault = productImage.IsDefault,
+                Image = productImage.Path,
+                ProductId = productImage.ProductId,
+            };
+        }
+
         public async Task<ProductImageViewModel> RetrieveById(int productImageId)
         {
             try
@@ -75,13 +86,7 @@ namespace SShop.Repositories.Catalog.ProductImages
                 var productImage = await _context.ProductImages.FindAsync(productImageId);
                 if (productImage == null)
                     return null;
-                return new ProductImageViewModel()
-                {
-                    Id = productImage.Id,
-                    IsDefault = productImage.IsDefault,
-                    Image = productImage.Path,
-                    ProductId = productImage.ProductId,
-                };
+                return GetProductImageViewModel(productImage);
             }
             catch { return null; }
         }
@@ -117,13 +122,7 @@ namespace SShop.Repositories.Catalog.ProductImages
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new ProductImageViewModel()
-                    {
-                        Id = x.Id,
-                        Image = x.Path,
-                        IsDefault = x.IsDefault,
-                        ProductId = x.ProductId
-                    })
+                    .Select(x => GetProductImageViewModel(x))
                     .ToList();
 
                 return new PagedResult<ProductImageViewModel>

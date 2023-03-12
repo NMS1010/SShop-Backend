@@ -56,6 +56,18 @@ namespace SShop.Repositories.Catalog.Brands
             }
         }
 
+        public BrandViewModel GetBrandViewModel(Brand brand)
+        {
+            return new BrandViewModel()
+            {
+                BrandId = brand.BrandId,
+                BrandName = brand.BrandName,
+                Origin = brand.Origin,
+                Image = brand.Image,
+                TotalProduct = brand.Products.Count
+            };
+        }
+
         public async Task<PagedResult<BrandViewModel>> RetrieveAll(BrandGetPagingRequest request)
         {
             try
@@ -72,14 +84,7 @@ namespace SShop.Repositories.Catalog.Brands
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new BrandViewModel()
-                    {
-                        BrandId = x.BrandId,
-                        BrandName = x.BrandName,
-                        Origin = x.Origin,
-                        Image = x.Image,
-                        TotalProduct = x.Products.Count
-                    }).ToList();
+                    .Select(x => GetBrandViewModel(x)).ToList();
 
                 return new PagedResult<BrandViewModel>
                 {
@@ -100,14 +105,7 @@ namespace SShop.Repositories.Catalog.Brands
                 var brand = await _context.Brands.Include(x => x.Products).Where(x => x.BrandId == brandId).FirstOrDefaultAsync();
                 if (brand == null)
                     return null;
-                return new BrandViewModel()
-                {
-                    BrandId = brand.BrandId,
-                    BrandName = brand.BrandName,
-                    Origin = brand.Origin,
-                    Image = brand.Image,
-                    TotalProduct = brand.Products.Count
-                };
+                return GetBrandViewModel(brand);
             }
             catch
             {
