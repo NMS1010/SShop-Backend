@@ -56,6 +56,23 @@ namespace SShop.Repositories.Catalog.OrderItems
             }
         }
 
+        public OrderItemViewModel GetOrderItemViewModel(OrderItem orderItem)
+        {
+            return new OrderItemViewModel()
+            {
+                OrderItemId = orderItem.OrderItemId,
+                OrderId = orderItem.OrderId,
+                ProductId = orderItem.ProductId,
+                ProductName = orderItem.Product.Name,
+                ProductImage = orderItem.Product.ProductImages
+                            .Where(c => c.IsDefault == true && c.ProductId == orderItem.ProductId)
+                            .FirstOrDefault()?.Path,
+                Quantity = orderItem.Quantity,
+                UnitPrice = orderItem.UnitPrice,
+                TotalPrice = orderItem.TotalPrice
+            };
+        }
+
         public async Task<PagedResult<OrderItemViewModel>> RetrieveAll(OrderItemGetPagingRequest request)
         {
             try
@@ -70,19 +87,7 @@ namespace SShop.Repositories.Catalog.OrderItems
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new OrderItemViewModel()
-                    {
-                        OrderItemId = x.OrderItemId,
-                        OrderId = x.OrderId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ProductImage = x.Product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()?.Path,
-                        Quantity = x.Quantity,
-                        UnitPrice = x.UnitPrice,
-                        TotalPrice = x.TotalPrice
-                    }).ToList();
+                    .Select(x => GetOrderItemViewModel(x)).ToList();
 
                 return new PagedResult<OrderItemViewModel>
                 {
@@ -107,19 +112,7 @@ namespace SShop.Repositories.Catalog.OrderItems
                     .FirstOrDefaultAsync();
                 if (orderItem == null)
                     return null;
-                return new OrderItemViewModel()
-                {
-                    OrderItemId = orderItem.OrderItemId,
-                    OrderId = orderItem.OrderId,
-                    ProductId = orderItem.ProductId,
-                    ProductName = orderItem.Product.Name,
-                    ProductImage = orderItem.Product.ProductImages
-                        .Where(c => c.IsDefault == true && c.ProductId == orderItem.ProductId)
-                        .FirstOrDefault()?.Path,
-                    Quantity = orderItem.Quantity,
-                    UnitPrice = orderItem.UnitPrice,
-                    TotalPrice = orderItem.TotalPrice,
-                };
+                return GetOrderItemViewModel(orderItem);
             }
             catch
             {
@@ -137,19 +130,7 @@ namespace SShop.Repositories.Catalog.OrderItems
                     .ThenInclude(x => x.ProductImages)
                     .ToListAsync();
                 var data = query
-                .Select(x => new OrderItemViewModel()
-                {
-                    OrderItemId = x.OrderItemId,
-                    OrderId = x.OrderId,
-                    ProductId = x.ProductId,
-                    ProductName = x.Product.Name,
-                    ProductImage = x.Product.ProductImages
-                        .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                        .FirstOrDefault()?.Path,
-                    Quantity = x.Quantity,
-                    UnitPrice = x.UnitPrice,
-                    TotalPrice = x.TotalPrice
-                }).ToList();
+                .Select(x => GetOrderItemViewModel(x)).ToList();
 
                 return new PagedResult<OrderItemViewModel>
                 {

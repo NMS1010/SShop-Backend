@@ -70,7 +70,7 @@ namespace SShop.Repositories.System.Users
             var token = new JwtSecurityToken(_configuration["Tokens:Issuer"],
                 _configuration["Tokens:Issuer"],
                 claims,
-                expires: DateTime.Now.AddMinutes(30),
+                expires: DateTime.Now.AddMinutes(10),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -130,10 +130,10 @@ namespace SShop.Repositories.System.Users
             if (user == null)
                 throw new KeyNotFoundException("Username/password is incorrect");
             var res = await _signInManager.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
-            if (res.IsLockedOut)
-            {
-                throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
-            }
+            //if (res.IsLockedOut)
+            //{
+            //    throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
+            //}
             if (!res.Succeeded)
                 throw new KeyNotFoundException("Username/password is incorrect");
             if (user.Status == USER_STATUS.IN_ACTIVE)
@@ -267,6 +267,33 @@ namespace SShop.Repositories.System.Users
             }
         }
 
+        public UserViewModel GetUserViewModel(AppUser user)
+        {
+            return new UserViewModel()
+            {
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email,
+                UserName = user.UserName,
+                Address = user.Address,
+                Dob = user.DateOfBirth.ToString("yyyy-MM-dd"),
+                Gender = user.Gender,
+                Avatar = user.Avatar,
+                DateCreated = user.DateCreated.ToString(),
+                DateUpdated = user.DateUpdated.ToString(),
+                Status = user.Status,
+                Password = user.PasswordHash,
+                TotalCartItem = user.CartItems.Count,
+                TotalWishItem = user.WishItems.Count,
+                TotalOrders = user.Orders.Count,
+                TotalBought = user.Orders.Sum(o => o.OrderItems.Sum(oi => oi.Quantity)),
+                TotalCost = user.Orders.Sum(o => o.TotalPrice),
+                StatusCode = USER_STATUS.UserStatus[user.Status],
+            };
+        }
+
         public async Task<PagedResult<UserViewModel>> RetrieveAll(UserGetPagingRequest request)
         {
             try
@@ -291,29 +318,7 @@ namespace SShop.Repositories.System.Users
                 var dt = users
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new UserViewModel()
-                    {
-                        UserId = x.Id,
-                        FirstName = x.FirstName,
-                        LastName = x.LastName,
-                        PhoneNumber = x.PhoneNumber,
-                        Email = x.Email,
-                        UserName = x.UserName,
-                        Address = x.Address,
-                        Dob = x.DateOfBirth.ToString("yyyy-MM-dd"),
-                        Gender = x.Gender,
-                        Avatar = x.Avatar,
-                        DateCreated = x.DateCreated.ToString(),
-                        DateUpdated = x.DateUpdated.ToString(),
-                        Status = x.Status,
-                        Password = x.PasswordHash,
-                        TotalCartItem = x.CartItems.Count,
-                        TotalWishItem = x.WishItems.Count,
-                        TotalOrders = x.Orders.Count,
-                        TotalBought = x.Orders.Sum(o => o.OrderItems.Sum(oi => oi.Quantity)),
-                        TotalCost = x.Orders.Sum(o => o.TotalPrice),
-                        StatusCode = USER_STATUS.UserStatus[x.Status],
-                    }).ToList();
+                    .Select(x => GetUserViewModel(x)).ToList();
 
                 foreach (var x in dt)
                 {
@@ -359,29 +364,7 @@ namespace SShop.Repositories.System.Users
                     .FirstOrDefaultAsync();
                 if (x == null)
                     return null;
-                var user = new UserViewModel()
-                {
-                    UserId = x.Id,
-                    FirstName = x.FirstName,
-                    LastName = x.LastName,
-                    PhoneNumber = x.PhoneNumber,
-                    Email = x.Email,
-                    UserName = x.UserName,
-                    Address = x.Address,
-                    Dob = x.DateOfBirth.ToString("yyyy-MM-dd"),
-                    Gender = x.Gender,
-                    Avatar = x.Avatar,
-                    DateCreated = x.DateCreated.ToString(),
-                    DateUpdated = x.DateUpdated.ToString(),
-                    Status = x.Status,
-                    Password = x.PasswordHash,
-                    TotalCartItem = x.CartItems.Count,
-                    TotalWishItem = x.WishItems.Count,
-                    TotalOrders = x.Orders.Count,
-                    TotalBought = x.Orders.Sum(o => o.OrderItems.Sum(oi => oi.Quantity)),
-                    TotalCost = x.Orders.Sum(o => o.TotalPrice),
-                    StatusCode = USER_STATUS.UserStatus[x.Status],
-                };
+                var user = GetUserViewModel(x);
                 var roles = await _userManager.GetRolesAsync(x);
                 user.RoleIds = (await _context.UserRoles.Where(u => u.UserId == x.Id).Select(k => k.RoleId).ToListAsync());
                 user.Roles = new List<RoleViewModel>();

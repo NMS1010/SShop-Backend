@@ -115,6 +115,55 @@ namespace SShop.Repositories.Catalog.Products
             return s;
         }
 
+        private ProductViewModel GetProductViewModel(Product product)
+        {
+            return new ProductViewModel()
+            {
+                ProductId = product.ProductId,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                Quantity = product.Quantity,
+                DateCreated = product.DateCreated,
+                Status = product.Status,
+                Origin = product.Origin,
+                CategoryName = product.Category.Name,
+                BrandName = product.Brand.BrandName,
+                ImagePath = product.ProductImages
+                            .Where(c => c.IsDefault == true && c.ProductId == product.ProductId)
+                            .FirstOrDefault()
+                            ?.Path,
+                BrandId = product.BrandId,
+                CategoryId = product.CategoryId,
+                StatusCode = PRODUCT_STATUS.ProductStatus[product.Status],
+                TotalPurchased = product.OrderItems.Sum(g => g.Quantity),
+                StatusClass = GenerateProductStatusClass(product.Status),
+                ProductReview = new PagedResult<ReviewItemViewModel>()
+                {
+                    TotalItem = product.ReviewItems.Where(r => r.Status == 1).Count(),
+                    Items = product.ReviewItems.Where(r => r.Status == 1).Select(g => new ReviewItemViewModel()
+                    {
+                        Content = g.Content,
+                        DateCreated = g.DateCreated,
+                        DateUpdated = g.DateUpdated,
+                        ProductId = g.ProductId,
+                        ProductImage = product.ProductImages
+                                .Where(c => c.IsDefault == true && c.ProductId == product.ProductId)
+                                .FirstOrDefault()
+                                ?.Path,
+                        ProductName = product.Name,
+                        Rating = g.Rating,
+                        ReviewItemId = g.ReviewItemId,
+                        Status = g.Status,
+                        UserId = g.UserId,
+                        UserAvatar = g.User.Avatar,
+                        UserName = g.User.UserName
+                    }).ToList()
+                },
+                AverageRating = product?.ReviewItems.Where(r => r.Status == 1).Count() > 0 ? (int)product?.ReviewItems.Where(r => r.Status == 1).Average(x => x.Rating) : 0
+            };
+        }
+
         public async Task<PagedResult<ProductViewModel>> RetrieveAll(ProductGetPagingRequest request)
         {
             try
@@ -131,13 +180,13 @@ namespace SShop.Repositories.Catalog.Products
                 {
                     query = query.Where(x => x.Name.ToLower().Contains(request.Keyword.ToLower())).ToList();
                 }
-                if (request.CategoryId != 0)
+                if (request.CategoryIds?.ToList()?.Count > 0)
                 {
-                    query = query.Where(x => x.CategoryId == request.CategoryId).ToList();
+                    query = query.Where(x => request.CategoryIds.Contains(x.CategoryId)).ToList();
                 }
-                if (request.BrandId != 0)
+                if (request.BrandIds?.ToList()?.Count > 0)
                 {
-                    query = query.Where(x => x.BrandId == request.BrandId).ToList();
+                    query = query.Where(x => request.BrandIds.Contains(x.BrandId)).ToList();
                 }
                 if (request.MaxPrice != decimal.MaxValue)
                 {
@@ -164,51 +213,7 @@ namespace SShop.Repositories.Catalog.Products
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new ProductViewModel()
-                    {
-                        ProductId = x.ProductId,
-                        Name = x.Name,
-                        Description = x.Description,
-                        Price = x.Price,
-                        Quantity = x.Quantity,
-                        DateCreated = x.DateCreated,
-                        Status = x.Status,
-                        Origin = x.Origin,
-                        CategoryName = x.Category.Name,
-                        BrandName = x.Brand.BrandName,
-                        ImagePath = x.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()
-                            ?.Path,
-                        BrandId = x.BrandId,
-                        CategoryId = x.CategoryId,
-                        StatusCode = PRODUCT_STATUS.ProductStatus[x.Status],
-                        TotalPurchased = x.OrderItems.Sum(g => g.Quantity),
-                        StatusClass = GenerateProductStatusClass(x.Status),
-                        ProductReview = new PagedResult<ReviewItemViewModel>()
-                        {
-                            TotalItem = x.ReviewItems.Where(r => r.Status == 1).Count(),
-                            Items = x.ReviewItems.Where(r => r.Status == 1).Select(g => new ReviewItemViewModel()
-                            {
-                                Content = g.Content,
-                                DateCreated = g.DateCreated,
-                                DateUpdated = g.DateUpdated,
-                                ProductId = g.ProductId,
-                                ProductImage = x.ProductImages
-                                        .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                                        .FirstOrDefault()
-                                        ?.Path,
-                                ProductName = x.Name,
-                                Rating = g.Rating,
-                                ReviewItemId = g.ReviewItemId,
-                                Status = g.Status,
-                                UserId = g.UserId,
-                                UserAvatar = g.User.Avatar,
-                                UserName = g.User.UserName
-                            }).ToList()
-                        },
-                        AverageRating = x?.ReviewItems.Where(r => r.Status == 1).Count() > 0 ? (int)x?.ReviewItems.Where(r => r.Status == 1).Average(x => x.Rating) : 0
-                    }).ToList();
+                    .Select(x => GetProductViewModel(x)).ToList();
 
                 foreach (var product in data)
                 {
@@ -242,52 +247,7 @@ namespace SShop.Repositories.Catalog.Products
                     .FirstOrDefaultAsync();
                 if (product == null)
                     return null;
-                return new ProductViewModel()
-                {
-                    ProductId = product.ProductId,
-                    Name = product.Name,
-                    Description = product.Description,
-                    Price = product.Price,
-                    Quantity = product.Quantity,
-                    DateCreated = product.DateCreated,
-                    Status = product.Status,
-                    Origin = product.Origin,
-                    CategoryName = product.Category.Name,
-                    BrandName = product.Brand.BrandName,
-                    ImagePath = product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == product.ProductId)
-                            .FirstOrDefault()
-                            .Path,
-                    BrandId = product.BrandId,
-                    CategoryId = product.CategoryId,
-                    StatusCode = PRODUCT_STATUS.ProductStatus[product.Status],
-                    TotalPurchased = product.OrderItems.Sum(g => g.Quantity),
-                    StatusClass = GenerateProductStatusClass(product.Status),
-                    SubImages = await _productImageService.RetrieveAll(new ProductImageGetPagingRequest() { ProductId = product.ProductId }),
-                    ProductReview = new PagedResult<ReviewItemViewModel>()
-                    {
-                        TotalItem = product.ReviewItems.Where(r => r.Status == 1).Count(),
-                        Items = product.ReviewItems.Where(r => r.Status == 1).Select(g => new ReviewItemViewModel()
-                        {
-                            Content = g.Content,
-                            DateCreated = g.DateCreated,
-                            DateUpdated = g.DateUpdated,
-                            ProductId = g.ProductId,
-                            ProductImage = product.ProductImages
-                                    .Where(c => c.IsDefault == true && c.ProductId == product.ProductId)
-                                    .FirstOrDefault()
-                                    ?.Path,
-                            ProductName = product.Name,
-                            Rating = g.Rating,
-                            ReviewItemId = g.ReviewItemId,
-                            Status = g.Status,
-                            UserId = g.UserId,
-                            UserAvatar = g.User.Avatar,
-                            UserName = g.User.UserName
-                        }).ToList()
-                    },
-                    AverageRating = product?.ReviewItems.Where(r => r.Status == 1).Count() > 0 ? (int)product?.ReviewItems.Where(r => r.Status == 1).Average(x => x.Rating) : 0
-                };
+                return GetProductViewModel(product);
             }
             catch
             {

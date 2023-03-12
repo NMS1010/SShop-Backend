@@ -66,6 +66,25 @@ namespace SShop.Repositories.Catalog.WishItems
             }
         }
 
+        public WishItemViewModel GetWishItemViewModel(WishItem wishItem)
+        {
+            return new WishItemViewModel()
+            {
+                WishItemId = wishItem.WishItemId,
+                ProductId = wishItem.ProductId,
+                ProductName = wishItem.Product.Name,
+                ProductImage = wishItem.Product.ProductImages
+                        .Where(c => c.IsDefault == true && c.ProductId == wishItem.ProductId)
+                        .FirstOrDefault()?.Path,
+                UserId = wishItem.UserId,
+                DateAdded = wishItem.DateAdded,
+                Status = wishItem.Status,
+                UnitPrice = wishItem.Product.Price,
+                UserName = wishItem.User.UserName,
+                ProductStatus = PRODUCT_STATUS.ProductStatus[wishItem.Product.Status]
+            };
+        }
+
         public async Task<PagedResult<WishItemViewModel>> RetrieveAll(WishItemGetPagingRequest request)
         {
             try
@@ -84,21 +103,7 @@ namespace SShop.Repositories.Catalog.WishItems
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new WishItemViewModel()
-                    {
-                        WishItemId = x.WishItemId,
-                        UserId = x.UserId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ProductImage = x.Product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()?.Path,
-                        DateAdded = x.DateAdded,
-                        Status = x.Status,
-                        UnitPrice = x.Product.Price,
-                        UserName = x.User.UserName,
-                        ProductStatus = PRODUCT_STATUS.ProductStatus[x.Product.Status]
-                    }).ToList();
+                    .Select(x => GetWishItemViewModel(x)).ToList();
 
                 return new PagedResult<WishItemViewModel>
                 {
@@ -124,21 +129,7 @@ namespace SShop.Repositories.Catalog.WishItems
                     .FirstOrDefaultAsync();
                 if (wishItem == null)
                     return null;
-                return new WishItemViewModel()
-                {
-                    WishItemId = wishItem.WishItemId,
-                    ProductId = wishItem.ProductId,
-                    ProductName = wishItem.Product.Name,
-                    ProductImage = wishItem.Product.ProductImages
-                        .Where(c => c.IsDefault == true && c.ProductId == wishItem.ProductId)
-                        .FirstOrDefault()?.Path,
-                    UserId = wishItem.UserId,
-                    DateAdded = wishItem.DateAdded,
-                    Status = wishItem.Status,
-                    UnitPrice = wishItem.Product.Price,
-                    UserName = wishItem.User.UserName,
-                    ProductStatus = PRODUCT_STATUS.ProductStatus[wishItem.Product.Status]
-                };
+                return GetWishItemViewModel(wishItem);
             }
             catch
             {
@@ -158,21 +149,7 @@ namespace SShop.Repositories.Catalog.WishItems
                     .ToListAsync();
 
                 var data = query
-                    .Select(x => new WishItemViewModel()
-                    {
-                        WishItemId = x.WishItemId,
-                        UserId = x.UserId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ProductImage = x.Product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()?.Path,
-                        DateAdded = x.DateAdded,
-                        Status = x.Status,
-                        UnitPrice = x.Product.Price,
-                        UserName = x.User.UserName,
-                        ProductStatus = PRODUCT_STATUS.ProductStatus[x.Product.Status]
-                    }).ToList();
+                    .Select(x => GetWishItemViewModel(x)).ToList();
 
                 return new PagedResult<WishItemViewModel>
                 {

@@ -87,6 +87,21 @@ namespace SShop.Repositories.Catalog.Discounts
             catch { return -1; }
         }
 
+        public DiscountViewModel GetDiscountViewModel(Discount discount)
+        {
+            return new DiscountViewModel()
+            {
+                DiscountId = discount.DiscountId,
+                DiscountCode = discount.DiscountCode,
+                DiscountValue = discount.DiscountValue,
+                StartDate = discount.StartDate,
+                EndDate = discount.EndDate,
+                Status = discount.Status,
+                Quantity = discount.Quantity,
+                StatusCode = DISCOUNT_STATUS.DiscountStatus[discount.Status]
+            };
+        }
+
         public async Task<PagedResult<DiscountViewModel>> RetrieveAll(DiscountGetPagingRequest request)
         {
             try
@@ -102,17 +117,7 @@ namespace SShop.Repositories.Catalog.Discounts
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new DiscountViewModel()
-                    {
-                        DiscountId = x.DiscountId,
-                        DiscountCode = x.DiscountCode,
-                        DiscountValue = x.DiscountValue,
-                        StartDate = x.StartDate,
-                        EndDate = x.EndDate,
-                        Status = x.Status,
-                        Quantity = x.Quantity,
-                        StatusCode = DISCOUNT_STATUS.DiscountStatus[x.Status]
-                    }).ToList();
+                    .Select(x => GetDiscountViewModel(x)).ToList();
 
                 return new PagedResult<DiscountViewModel>
                 {
@@ -135,17 +140,7 @@ namespace SShop.Repositories.Catalog.Discounts
                 .FirstOrDefaultAsync();
                 if (discount == null)
                     return null;
-                return new DiscountViewModel()
-                {
-                    DiscountId = discount.DiscountId,
-                    DiscountCode = discount.DiscountCode,
-                    DiscountValue = discount.DiscountValue,
-                    StartDate = discount.StartDate,
-                    EndDate = discount.EndDate,
-                    Status = discount.Status,
-                    Quantity = discount.Quantity,
-                    StatusCode = DISCOUNT_STATUS.DiscountStatus[discount.Status]
-                };
+                return GetDiscountViewModel(discount);
             }
             catch
             {

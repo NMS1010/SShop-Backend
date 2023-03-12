@@ -61,6 +61,27 @@ namespace SShop.Repositories.Catalog.ReviewItems
             }
         }
 
+        public ReviewItemViewModel GetReviewItemViewModel(ReviewItem review)
+        {
+            return new ReviewItemViewModel()
+            {
+                ReviewItemId = review.ReviewItemId,
+                ProductId = review.ProductId,
+                ProductName = review.Product.Name,
+                ProductImage = review.Product.ProductImages
+                        .Where(c => c.IsDefault == true && c.ProductId == review.ProductId)
+                        .FirstOrDefault()?.Path,
+                UserId = review.UserId,
+                Content = review.Content,
+                Rating = review.Rating,
+                DateCreated = review.DateCreated,
+                DateUpdated = review.DateUpdated,
+                Status = review.Status,
+                UserName = review.User.UserName,
+                UserAvatar = review.User.Avatar
+            };
+        }
+
         public async Task<PagedResult<ReviewItemViewModel>> RetrieveAll(ReviewItemGetPagingRequest request)
         {
             try
@@ -79,23 +100,7 @@ namespace SShop.Repositories.Catalog.ReviewItems
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new ReviewItemViewModel()
-                    {
-                        ReviewItemId = x.ReviewItemId,
-                        UserId = x.UserId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ProductImage = x.Product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()?.Path,
-                        Rating = x.Rating,
-                        Content = x.Content,
-                        DateCreated = x.DateCreated,
-                        DateUpdated = x.DateUpdated,
-                        Status = x.Status,
-                        UserName = x.User.UserName,
-                        UserAvatar = x.User.Avatar
-                    }).ToList();
+                    .Select(x => GetReviewItemViewModel(x)).ToList();
 
                 return new PagedResult<ReviewItemViewModel>
                 {
@@ -121,23 +126,7 @@ namespace SShop.Repositories.Catalog.ReviewItems
                     .FirstOrDefaultAsync();
                 if (review == null)
                     return null;
-                return new ReviewItemViewModel()
-                {
-                    ReviewItemId = review.ReviewItemId,
-                    ProductId = review.ProductId,
-                    ProductName = review.Product.Name,
-                    ProductImage = review.Product.ProductImages
-                        .Where(c => c.IsDefault == true && c.ProductId == review.ProductId)
-                        .FirstOrDefault()?.Path,
-                    UserId = review.UserId,
-                    Content = review.Content,
-                    Rating = review.Rating,
-                    DateCreated = review.DateCreated,
-                    DateUpdated = review.DateUpdated,
-                    Status = review.Status,
-                    UserName = review.User.UserName,
-                    UserAvatar = review.User.Avatar
-                };
+                return GetReviewItemViewModel(review);
             }
             catch
             {
@@ -194,23 +183,7 @@ namespace SShop.Repositories.Catalog.ReviewItems
                     .ThenInclude(x => x.ProductImages)
                     .ToListAsync();
                 var data = query
-                    .Select(x => new ReviewItemViewModel()
-                    {
-                        ReviewItemId = x.ReviewItemId,
-                        UserId = x.UserId,
-                        ProductId = x.ProductId,
-                        ProductName = x.Product.Name,
-                        ProductImage = x.Product.ProductImages
-                            .Where(c => c.IsDefault == true && c.ProductId == x.ProductId)
-                            .FirstOrDefault()?.Path,
-                        Rating = x.Rating,
-                        Content = x.Content,
-                        DateCreated = x.DateCreated,
-                        DateUpdated = x.DateUpdated,
-                        Status = x.Status,
-                        UserName = x.User.UserName,
-                        UserAvatar = x.User.Avatar
-                    }).ToList();
+                    .Select(x => GetReviewItemViewModel(x)).ToList();
 
                 return new PagedResult<ReviewItemViewModel>
                 {

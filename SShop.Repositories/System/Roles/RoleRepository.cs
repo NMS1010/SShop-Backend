@@ -11,10 +11,12 @@ namespace SShop.Repositories.System.Roles
     public class RoleRepository : IRoleRepository
     {
         private readonly AppDbContext _context;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public RoleRepository(AppDbContext context)
+        public RoleRepository(AppDbContext context, RoleManager<IdentityRole> roleManager)
         {
             _context = context;
+            _roleManager = roleManager;
         }
 
         public async Task<int> Create(RoleCreateRequest request)
@@ -25,8 +27,7 @@ namespace SShop.Repositories.System.Roles
                 {
                     Name = request.RoleName
                 };
-                _context.Roles.Add(role);
-                await _context.SaveChangesAsync();
+                await _roleManager.CreateAsync(role);
                 return 1;
             }
             catch
@@ -40,7 +41,7 @@ namespace SShop.Repositories.System.Roles
             try
             {
                 var role = await _context.Roles.FindAsync(id);
-                _context.Roles.Remove(role);
+                await _roleManager.DeleteAsync(role);
                 await _context.SaveChangesAsync();
                 return 1;
             }
@@ -48,6 +49,15 @@ namespace SShop.Repositories.System.Roles
             {
                 return -1;
             }
+        }
+
+        public RoleViewModel GetRoleViewModel(IdentityRole role)
+        {
+            return new RoleViewModel
+            {
+                RoleId = role.Id,
+                RoleName = role.Name
+            };
         }
 
         public async Task<PagedResult<RoleViewModel>> RetrieveAll(RoleGetPagingRequest request)
@@ -65,11 +75,7 @@ namespace SShop.Repositories.System.Roles
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new RoleViewModel()
-                    {
-                        RoleId = x.Id,
-                        RoleName = x.Name,
-                    }).ToList();
+                    .Select(x => GetRoleViewModel(x)).ToList();
 
                 return new PagedResult<RoleViewModel>
                 {
@@ -89,11 +95,7 @@ namespace SShop.Repositories.System.Roles
             {
                 var role = await _context.Roles.FindAsync(id);
 
-                return new RoleViewModel
-                {
-                    RoleId = role.Id,
-                    RoleName = role.Name
-                };
+                return GetRoleViewModel(role);
             }
             catch
             {
@@ -107,7 +109,7 @@ namespace SShop.Repositories.System.Roles
             {
                 var role = await _context.Roles.FindAsync(request.RoleId);
                 role.Name = request.RoleName;
-                _context.Roles.Update(role);
+                await _roleManager.UpdateAsync(role);
                 return await _context.SaveChangesAsync();
             }
             catch

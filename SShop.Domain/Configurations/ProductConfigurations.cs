@@ -19,7 +19,7 @@ namespace SShop.Domain.Configurations
                 .IsRequired();
             builder
                 .Property(p => p.Description)
-                .HasMaxLength(255)
+                .HasMaxLength(int.MaxValue)
                 .IsRequired();
             builder
                 .Property(p => p.Price)

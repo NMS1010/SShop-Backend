@@ -149,6 +149,36 @@ namespace SShop.Repositories.Catalog.Orders
             return s;
         }
 
+        public OrderViewModel GetOrderViewModel(Order order)
+        {
+            return new OrderViewModel()
+            {
+                OrderId = order.OrderId,
+                UserId = order.UserId,
+                UserFullName = order.User.FirstName + order.User.LastName,
+                UserAddress = order.User.Address,
+                UserPhone = order.User.PhoneNumber,
+                DiscountId = order?.DiscountId,
+                DiscountCode = order.Discount?.DiscountCode,
+                DiscountValue = order.Discount?.DiscountValue,
+                Shipping = order.Shipping,
+                TotalItemPrice = order.TotalItemPrice,
+                TotalPrice = order.TotalPrice,
+                Address = order.Address,
+                DateCreated = order.DateCreated,
+                DateDone = order.DateDone,
+                Status = order.Status,
+                StatusClass = GenerateOrderStatusClass(order.Status),
+                Name = order.Name,
+                Email = order.Email,
+                Phone = order.Phone,
+                Payment = order.Payment,
+                PaymentMethod = ORDER_PAYMENT.OrderPayment[order.Payment],
+                StatusCode = ORDER_STATUS.OrderStatus[order.Status],
+                TotalItem = order.OrderItems.Count
+            };
+        }
+
         public async Task<PagedResult<OrderViewModel>> RetrieveAll(OrderGetPagingRequest request)
         {
             try
@@ -168,32 +198,7 @@ namespace SShop.Repositories.Catalog.Orders
                 var data = query
                     .Skip((request.PageIndex - 1) * request.PageSize)
                     .Take(request.PageSize)
-                    .Select(x => new OrderViewModel()
-                    {
-                        OrderId = x.OrderId,
-                        UserId = x.UserId,
-                        UserFullName = x.User.FirstName + x.User.LastName,
-                        UserAddress = x.User.Address,
-                        UserPhone = x.User.PhoneNumber,
-                        DiscountId = x?.DiscountId,
-                        DiscountCode = x.Discount?.DiscountCode,
-                        DiscountValue = x.Discount?.DiscountValue,
-                        Shipping = x.Shipping,
-                        TotalItemPrice = x.TotalItemPrice,
-                        TotalPrice = x.TotalPrice,
-                        Address = x.Address,
-                        DateCreated = x.DateCreated,
-                        DateDone = x.DateDone,
-                        Status = x.Status,
-                        StatusClass = GenerateOrderStatusClass(x.Status),
-                        Name = x.Name,
-                        Email = x.Email,
-                        Phone = x.Phone,
-                        Payment = x.Payment,
-                        PaymentMethod = ORDER_PAYMENT.OrderPayment[x.Payment],
-                        StatusCode = ORDER_STATUS.OrderStatus[x.Status],
-                        TotalItem = x.OrderItems.Count
-                    }).ToList();
+                    .Select(x => GetOrderViewModel(x)).ToList();
                 foreach (var d in data)
                 {
                     d.OrderItems = await _orderItemServices.RetrieveByOrderId(d.OrderId);
@@ -223,33 +228,7 @@ namespace SShop.Repositories.Catalog.Orders
                     .FirstOrDefaultAsync();
                 if (order == null)
                     return null;
-                return new OrderViewModel()
-                {
-                    OrderId = order.OrderId,
-                    UserId = order.UserId,
-                    UserFullName = order.User.UserName,
-                    UserAddress = order.User.Address,
-                    UserPhone = order.User.PhoneNumber,
-                    DiscountId = order?.DiscountId,
-                    DiscountCode = order.Discount?.DiscountCode,
-                    DiscountValue = order.Discount?.DiscountValue,
-                    Shipping = order.Shipping,
-                    TotalItemPrice = order.TotalItemPrice,
-                    TotalPrice = order.TotalPrice,
-                    Address = order.Address,
-                    DateCreated = order.DateCreated,
-                    DateDone = order.DateDone,
-                    Status = order.Status,
-                    StatusClass = GenerateOrderStatusClass(order.Status),
-                    Name = order.Name,
-                    Email = order.Email,
-                    Phone = order.Phone,
-                    Payment = order.Payment,
-                    PaymentMethod = ORDER_PAYMENT.OrderPayment[order.Payment],
-                    StatusCode = ORDER_STATUS.OrderStatus[order.Status],
-                    TotalItem = order.OrderItems.Count,
-                    OrderItems = await _orderItemServices.RetrieveByOrderId(order.OrderId)
-                };
+                return GetOrderViewModel(order);
             }
             catch
             {
