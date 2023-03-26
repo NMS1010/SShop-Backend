@@ -25,9 +25,9 @@ namespace SShop.ViewModels.Catalog.Orders
         public DateTime? DateDone { get; set; }
         public int TotalItem { get; set; }
 
-        public DeliveryMethodViewModel DeliveryMethod;
-        public PaymentMethodViewModel PaymentMethod;
-        public OrderStateViewModel OrderState;
+        public DeliveryMethodViewModel DeliveryMethod { get; set; }
+        public PaymentMethodViewModel PaymentMethod { get; set; }
+        public OrderStateViewModel OrderState { get; set; }
         public AddressViewModel Address { get; set; }
         public PagedResult<OrderItemViewModel> OrderItems { get; set; }
     }

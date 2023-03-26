@@ -32,6 +32,8 @@ namespace SShop.Repositories.Catalog.Orders
 
             try
             {
+                var orderState = await _context.OrderStates
+                    .Where(x => x.OrderStateName == "Đang chuẩn bị").FirstOrDefaultAsync();
                 var order = new Order()
                 {
                     UserId = request.UserId,
@@ -41,10 +43,14 @@ namespace SShop.Repositories.Catalog.Orders
                     TotalPrice = request.Shipping + request.TotalItemPrice,
                     AddressId = request.AddressId,
                     DateCreated = DateTime.Now,
-                    Status = request.Status,
-                    Payment = request.Payment
+                    OrderStateId = orderState.OrderStateId,
+                    PaymentMethodId = request.PaymentMethodId,
+                    DeliveryMethodId = request.DeliveryMethodId
                 };
-                if (request.Payment == ORDER_PAYMENT.PAYPAL)
+                var paymentMethod = await _context.PaymentMethods
+                    .Where(x => x.PaymentMethodName == "Paypal" && x.PaymentMethodId == request.PaymentMethodId)
+                    .FirstOrDefaultAsync();
+                if (paymentMethod != null)
                 {
                     order.DateDone = DateTime.Now;
                 }
@@ -167,11 +173,22 @@ namespace SShop.Repositories.Catalog.Orders
                 TotalPrice = order.TotalPrice,
                 DateCreated = order.DateCreated,
                 DateDone = order.DateDone,
-                Status = order.Status,
-                StatusClass = GenerateOrderStatusClass(order.Status),
-                Payment = order.Payment,
-                PaymentMethod = ORDER_PAYMENT.OrderPayment[order.Payment],
-                StatusCode = ORDER_STATUS.OrderStatus[order.Status],
+                DeliveryMethod = new ViewModels.Catalog.DeliveryMethod.DeliveryMethodViewModel()
+                {
+                    DeliveryMethodId = order.DeliveryMethodId,
+                    DeliveryMethodName = order.DeliveryMethod.DeliveryMethodName,
+                    DeliveryMethodPrice = order.DeliveryMethod.Price
+                },
+                OrderState = new ViewModels.Catalog.OrderState.OrderStateViewModel()
+                {
+                    OrderStateId = order.OrderStateId,
+                    OrderStateName = order.OrderState.OrderStateName
+                },
+                PaymentMethod = new ViewModels.Catalog.PaymentMethod.PaymentMethodViewModel()
+                {
+                    PaymentMethodId = order.PaymentMethodId,
+                    PaymentMethodName = order.PaymentMethod.PaymentMethodName,
+                },
                 TotalItem = order.OrderItems.Count,
                 AddressId = order.AddressId
             };
@@ -187,6 +204,9 @@ namespace SShop.Repositories.Catalog.Orders
                     .Include(x => x.User)
                     .Include(x => x.Discount)
                     .Include(x => x.Address)
+                    .Include(x => x.PaymentMethod)
+                    .Include(x => x.OrderState)
+                    .Include(x => x.DeliveryMethod)
                     .ToListAsync();
                 if (!string.IsNullOrEmpty(request.Keyword))
                 {
@@ -226,6 +246,9 @@ namespace SShop.Repositories.Catalog.Orders
                     .Include(x => x.User)
                     .Include(x => x.Discount)
                     .Include(x => x.Address)
+                    .Include(x => x.PaymentMethod)
+                    .Include(x => x.OrderState)
+                    .Include(x => x.DeliveryMethod)
                     .FirstOrDefaultAsync();
                 if (order == null)
                     return null;
@@ -247,14 +270,14 @@ namespace SShop.Repositories.Catalog.Orders
                 var order = await _context.Orders.FindAsync(request.OrderId);
                 if (order == null)
                     return -1;
-                if (order.Status == ORDER_STATUS.DELIVERED && request.Status != ORDER_STATUS.RETURNED)
-                    return -1;
-                order.Status = request.Status;
-                if (request.Status == ORDER_STATUS.DELIVERED && order.Payment == ORDER_PAYMENT.COD)
-                {
-                    order.Payment = ORDER_PAYMENT.PAYPAL;
-                    order.DateDone = DateTime.Now;
-                }
+                //if (order.Status == ORDER_STATUS.DELIVERED && request.Status != ORDER_STATUS.RETURNED)
+                //    return -1;
+                //order.Status = request.Status;
+                //if (request.Status == ORDER_STATUS.DELIVERED && order.Payment == ORDER_PAYMENT.COD)
+                //{
+                //    order.Payment = ORDER_PAYMENT.PAYPAL;
+                //    order.DateDone = DateTime.Now;
+                //}
 
                 _context.Orders.Update(order);
 
@@ -268,19 +291,20 @@ namespace SShop.Repositories.Catalog.Orders
 
         public async Task<OrderOverviewViewModel> GetOverviewStatictis()
         {
-            var orders = await _context.Orders.Select(x => x.Status).ToListAsync();
+            //var orders = await _context.Orders.Select(x => x.Status).ToListAsync();
 
-            OrderOverviewViewModel orderOverview = new OrderOverviewViewModel()
-            {
-                TotalPending = orders.Where(x => x == ORDER_STATUS.PENDING).Count(),
-                TotalReturned = orders.Where(x => x == ORDER_STATUS.RETURNED).Count(),
-                TotalCanceled = orders.Where(x => x == ORDER_STATUS.CANCELED).Count(),
-                TotalReady = orders.Where(x => x == ORDER_STATUS.READY_TO_SHIP).Count(),
-                TotalCompleted = orders.Where(x => x == ORDER_STATUS.DELIVERED).Count(),
-                TotalDelivering = orders.Where(x => x == ORDER_STATUS.ON_THE_WAY).Count()
-            };
+            //OrderOverviewViewModel orderOverview = new OrderOverviewViewModel()
+            //{
+            //TotalPending = orders.Where(x => x == ORDER_STATUS.PENDING).Count(),
+            //    TotalReturned = orders.Where(x => x == ORDER_STATUS.RETURNED).Count(),
+            //    TotalCanceled = orders.Where(x => x == ORDER_STATUS.CANCELED).Count(),
+            //    TotalReady = orders.Where(x => x == ORDER_STATUS.READY_TO_SHIP).Count(),
+            //    TotalCompleted = orders.Where(x => x == ORDER_STATUS.DELIVERED).Count(),
+            //    TotalDelivering = orders.Where(x => x == ORDER_STATUS.ON_THE_WAY).Count()
+            //};
 
-            return orderOverview;
+            //return orderOverview;
+            return null;
         }
     }
 }
