@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SShop.ViewModels.Catalog.DeliveryMethod
 {
-    public class DeliveryMethodIUpdateRequest : DeliveryMethodRequest
+    public class DeliveryMethodUpdateRequest : DeliveryMethodRequest
     {
         [Required]
         public int DeliveryMethodId { get; set; }

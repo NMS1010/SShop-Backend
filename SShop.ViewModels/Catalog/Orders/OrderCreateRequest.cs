@@ -11,6 +11,12 @@ namespace SShop.ViewModels.Catalog.Orders
         public decimal DiscountValue { get; set; }
 
         [Required]
+        public int DeliveryMethodId { get; set; }
+
+        [Required]
+        public int PaymentMethodId { get; set; }
+
+        [Required]
         public decimal TotalItemPrice { get; set; }
 
         [Required]
@@ -18,11 +24,5 @@ namespace SShop.ViewModels.Catalog.Orders
 
         [Required]
         public int AddressId { get; set; }
-
-        [Required]
-        public int Status { get; set; }
-
-        [Required]
-        public int Payment { get; set; }
     }
 }

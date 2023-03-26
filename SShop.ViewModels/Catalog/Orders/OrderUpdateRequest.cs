@@ -7,6 +7,7 @@ namespace SShop.ViewModels.Catalog.Orders
         [Required]
         public int OrderId { get; set; }
 
-        public int Status { get; set; }
+        [Required]
+        public int OrderStateId { get; set; }
     }
 }

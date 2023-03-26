@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SShop.ViewModels.Catalog.DeliveryMethod
 {
-    public class DeliveryMethodICreateRequest : DeliveryMethodRequest
+    public class DeliveryMethodCreateRequest : DeliveryMethodRequest
     {
     }
 }
