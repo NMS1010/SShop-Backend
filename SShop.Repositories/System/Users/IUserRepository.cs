@@ -17,7 +17,7 @@ namespace SShop.Repositories.System.Users
 
         Task<string> AuthenticateWithGoogle(string email, string loginProvider, string providerKey);
 
-        Task<(bool, string)> Register(RegisterRequest request);
+        Task<bool> Register(RegisterRequest request);
 
         Task<bool> VerifyToken(string email, string token);
 
@@ -38,5 +38,9 @@ namespace SShop.Repositories.System.Users
         Task<List<string>> CheckEditUser(UserCheckEditRequest request);
 
         Task<bool> CheckEmail(string email);
+
+        Task<bool> CheckPhone(string phone);
+
+        Task<bool> CheckUsername(string username);
     }
 }

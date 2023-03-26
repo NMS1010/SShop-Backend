@@ -17,17 +17,14 @@ namespace SShop.ViewModels.System.Users
         [Required]
         public DateTime Dob { get; set; }
 
+        [Required]
         public string Email { get; set; }
+
+        [Required]
         public string PhoneNumber { get; set; }
 
         [Required]
-        public string Address { get; set; }
-
-        [Required]
         public string Gender { get; set; }
-
-        [Required]
-        public int Status { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -42,13 +39,11 @@ namespace SShop.ViewModels.System.Users
         [Required]
         public IFormFile Avatar { get; set; }
 
-        [Required]
-        public string[] Roles { get; set; }
-
         public string LoginProvider { get; set; }
         public string ProviderKey { get; set; }
         public string DisplayName { get; set; }
 
+        [Required]
         public string Host { get; set; }
     }
 }

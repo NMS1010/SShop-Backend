@@ -144,7 +144,7 @@ async Task CreateRoles(IServiceProvider serviceProvider)
 {
     var RoleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    foreach (var roleName in SystemConstants.UserRoles.Roles.Values)
+    foreach (var roleName in SystemConstants.UserRoles.Roles)
     {
         var roleExist = await RoleManager.RoleExistsAsync(roleName);
         if (!roleExist)

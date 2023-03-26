@@ -11,10 +11,12 @@ namespace SShop.Utilities.Constants.Systems
 
         public class UserRoles
         {
-            public static Dictionary<int, string> Roles = new Dictionary<int, string>()
+            public static readonly string CUSTOMER_ROLE = "Customer";
+            public static readonly string ADMIN_ROLE = "Admin";
+
+            public static readonly List<string> Roles = new()
             {
-                {1,"Admin" },
-                {2,"Customer" }
+                ADMIN_ROLE,CUSTOMER_ROLE
             };
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PayPal.Api;
 using SShop.Repositories.System.Users;
 using SShop.ViewModels.Common;
 using SShop.ViewModels.System.Users;
@@ -77,11 +78,9 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            (var res, var status) = await _userRepository.Register(request);
-            if (!res)
-            {
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, status));
-            }
+            request.Host = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
+            await _userRepository.Register(request);
+
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status201Created));
         }
 
@@ -143,8 +142,28 @@ namespace SShop.BackEndAPI.Controllers
         {
             var res = await _userRepository.CheckEmail(email);
             if (!res)
-                return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
-            return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
+        }
+
+        [HttpGet("check-username")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckUsername([FromQuery] string username)
+        {
+            var res = await _userRepository.CheckUsername(username);
+            if (!res)
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
+        }
+
+        [HttpGet("check-phone")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckPhone([FromQuery] string phone)
+        {
+            var res = await _userRepository.CheckPhone(phone);
+            if (!res)
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
         }
 
         [HttpPost("forgot-password")]

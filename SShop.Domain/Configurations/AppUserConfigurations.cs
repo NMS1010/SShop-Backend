@@ -24,9 +24,6 @@ namespace SShop.Domain.Configurations
                 .IsRequired();
             builder.Property(x => x.DateUpdated)
                 .IsRequired();
-            builder.Property(x => x.Address)
-                .HasMaxLength(200)
-                .IsRequired();
             builder.Property(x => x.Avatar)
                 .IsRequired();
             builder.Property(x => x.Gender)
@@ -38,7 +35,11 @@ namespace SShop.Domain.Configurations
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
+            builder
+                .HasMany(x => x.Addresses)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
             builder
                 .HasMany(x => x.CartItems)
                 .WithOne(x => x.User)

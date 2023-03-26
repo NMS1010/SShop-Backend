@@ -1,5 +1,6 @@
 ﻿using SShop.ViewModels.Catalog.Orders;
 using SShop.ViewModels.Common;
+using SShop.ViewModels.System.Addresses;
 using SShop.ViewModels.System.Roles;
 using System.Collections.Generic;
 
@@ -14,14 +15,12 @@ namespace SShop.ViewModels.System.Users
         public string LastName { get; set; }
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
-        public string Address { get; set; }
         public string Dob { get; set; }
         public string Gender { get; set; }
         public string DateCreated { get; set; }
         public string DateUpdated { get; set; }
         public int Status { get; set; }
         public string StatusCode { get; set; }
-        public string Password { get; set; }
         public int TotalBought { get; set; }
         public int TotalWishItem { get; set; }
         public int TotalCartItem { get; set; }

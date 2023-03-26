@@ -6,20 +6,24 @@ using SShop.ViewModels.Common;
 using Microsoft.EntityFrameworkCore;
 using SShop.Repositories.Catalog.OrderItems;
 using SShop.Services.MailJet;
+using SShop.ViewModels.System.Addresses;
+using SShop.Repositories.System.Addresses;
 
 namespace SShop.Repositories.Catalog.Orders
 {
     public class OrderRepository : IOrderRepository
     {
         private readonly AppDbContext _context;
-        private readonly IOrderItemRepository _orderItemServices;
+        private readonly IOrderItemRepository _orderItemRepository;
+        private readonly IAddressRepository _addressRepository;
         private readonly IMailJetServices _mailJetServices;
 
-        public OrderRepository(AppDbContext context, IOrderItemRepository orderItemServices, IMailJetServices mailJetServices)
+        public OrderRepository(AppDbContext context, IOrderItemRepository orderItemRepository, IMailJetServices mailJetServices, IAddressRepository addressRepository)
         {
             _context = context;
-            _orderItemServices = orderItemServices;
+            _orderItemRepository = orderItemRepository;
             _mailJetServices = mailJetServices;
+            _addressRepository = addressRepository;
         }
 
         public async Task<int> Create(OrderCreateRequest request)
@@ -35,12 +39,9 @@ namespace SShop.Repositories.Catalog.Orders
                     Shipping = request.Shipping,
                     TotalItemPrice = request.TotalItemPrice,
                     TotalPrice = request.Shipping + request.TotalItemPrice,
-                    Address = request.Address,
+                    AddressId = request.AddressId,
                     DateCreated = DateTime.Now,
                     Status = request.Status,
-                    Name = request.Name,
-                    Email = request.Email,
-                    Phone = request.Phone,
                     Payment = request.Payment
                 };
                 if (request.Payment == ORDER_PAYMENT.PAYPAL)
@@ -92,6 +93,7 @@ namespace SShop.Repositories.Catalog.Orders
             }
             catch
             {
+                await transaction.RollbackAsync();
                 return -1;
             }
         }
@@ -156,7 +158,6 @@ namespace SShop.Repositories.Catalog.Orders
                 OrderId = order.OrderId,
                 UserId = order.UserId,
                 UserFullName = order.User.FirstName + order.User.LastName,
-                UserAddress = order.User.Address,
                 UserPhone = order.User.PhoneNumber,
                 DiscountId = order?.DiscountId,
                 DiscountCode = order.Discount?.DiscountCode,
@@ -164,18 +165,15 @@ namespace SShop.Repositories.Catalog.Orders
                 Shipping = order.Shipping,
                 TotalItemPrice = order.TotalItemPrice,
                 TotalPrice = order.TotalPrice,
-                Address = order.Address,
                 DateCreated = order.DateCreated,
                 DateDone = order.DateDone,
                 Status = order.Status,
                 StatusClass = GenerateOrderStatusClass(order.Status),
-                Name = order.Name,
-                Email = order.Email,
-                Phone = order.Phone,
                 Payment = order.Payment,
                 PaymentMethod = ORDER_PAYMENT.OrderPayment[order.Payment],
                 StatusCode = ORDER_STATUS.OrderStatus[order.Status],
-                TotalItem = order.OrderItems.Count
+                TotalItem = order.OrderItems.Count,
+                AddressId = order.AddressId
             };
         }
 
@@ -188,11 +186,12 @@ namespace SShop.Repositories.Catalog.Orders
                     .Include(x => x.OrderItems)
                     .Include(x => x.User)
                     .Include(x => x.Discount)
+                    .Include(x => x.Address)
                     .ToListAsync();
                 if (!string.IsNullOrEmpty(request.Keyword))
                 {
                     query = query
-                        .Where(x => x.Address.Contains(request.Keyword))
+                        .Where(x => x.Address.SpecificAddress.Contains(request.Keyword))
                         .ToList();
                 }
                 var data = query
@@ -201,7 +200,8 @@ namespace SShop.Repositories.Catalog.Orders
                     .Select(x => GetOrderViewModel(x)).ToList();
                 foreach (var d in data)
                 {
-                    d.OrderItems = await _orderItemServices.RetrieveByOrderId(d.OrderId);
+                    d.OrderItems = await _orderItemRepository.RetrieveByOrderId(d.OrderId);
+                    d.Address = await _addressRepository.RetrieveById(d.AddressId);
                 }
                 return new PagedResult<OrderViewModel>
                 {
@@ -225,10 +225,14 @@ namespace SShop.Repositories.Catalog.Orders
                     .Include(x => x.OrderItems)
                     .Include(x => x.User)
                     .Include(x => x.Discount)
+                    .Include(x => x.Address)
                     .FirstOrDefaultAsync();
                 if (order == null)
                     return null;
-                return GetOrderViewModel(order);
+                var res = GetOrderViewModel(order);
+                res.Address = await _addressRepository.RetrieveById(order.AddressId);
+                res.OrderItems = await _orderItemRepository.RetrieveByOrderId(order.OrderId);
+                return res;
             }
             catch
             {

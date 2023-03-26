@@ -1,5 +1,6 @@
 ﻿using SShop.ViewModels.Catalog.OrderItems;
 using SShop.ViewModels.Common;
+using SShop.ViewModels.System.Addresses;
 using System;
 
 namespace SShop.ViewModels.Catalog.Orders
@@ -9,7 +10,6 @@ namespace SShop.ViewModels.Catalog.Orders
         public int OrderId { get; set; }
         public string UserId { get; set; }
         public string UserFullName { get; set; }
-        public string UserAddress { get; set; }
         public string UserPhone { get; set; }
         public int? DiscountId { get; set; }
         public string DiscountCode { get; set; }
@@ -17,10 +17,7 @@ namespace SShop.ViewModels.Catalog.Orders
         public decimal TotalItemPrice { get; set; }
         public decimal Shipping { get; set; }
         public decimal TotalPrice { get; set; }
-        public string Address { get; set; }
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
+        public int AddressId { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime? DateDone { get; set; }
         public int Status { get; set; }
@@ -29,6 +26,7 @@ namespace SShop.ViewModels.Catalog.Orders
         public int Payment { get; set; }
         public string PaymentMethod { get; set; }
         public int TotalItem { get; set; }
+        public AddressViewModel Address { get; set; }
         public PagedResult<OrderItemViewModel> OrderItems { get; set; }
     }
 }

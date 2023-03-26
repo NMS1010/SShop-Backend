@@ -13,7 +13,6 @@ namespace SShop.ViewModels.Catalog.CartItems
         [Required]
         public int Quantity { get; set; } = 1;
 
-        [Required]
         public int Status { get; set; } = 1;
     }
 }

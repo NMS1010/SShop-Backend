@@ -24,6 +24,10 @@ namespace SShop.Domain.EF
                 }
             }
             modelBuilder.ApplyConfiguration(new AppUserConfigurations());
+            modelBuilder.ApplyConfiguration(new AddressConfigurations());
+            modelBuilder.ApplyConfiguration(new WardConfigurations());
+            modelBuilder.ApplyConfiguration(new DistrictConfigurations());
+            modelBuilder.ApplyConfiguration(new ProvinceConfigurations());
             modelBuilder.ApplyConfiguration(new ProductConfigurations());
             modelBuilder.ApplyConfiguration(new CategoryConfigurations());
             modelBuilder.ApplyConfiguration(new DiscountConfigurations());
@@ -51,5 +55,9 @@ namespace SShop.Domain.EF
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<Brand> Brands { get; set; }
         public DbSet<WishItem> WishItems { get; set; }
+        public DbSet<Address> Addresses { get; set; }
+        public DbSet<Province> Provinces { get; set; }
+        public DbSet<District> Districts { get; set; }
+        public DbSet<Ward> Wards { get; set; }
     }
 }

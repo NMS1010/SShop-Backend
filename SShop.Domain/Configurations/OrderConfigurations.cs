@@ -26,18 +26,6 @@ namespace SShop.Domain.Configurations
                 .Property(x => x.TotalItemPrice)
                 .HasColumnType("DECIMAL")
                 .IsRequired();
-            builder.Property(x => x.Address)
-                .HasMaxLength(200)
-                .IsRequired();
-            builder.Property(x => x.Name)
-                .HasMaxLength(200)
-                .IsRequired();
-            builder.Property(x => x.Phone)
-                .HasMaxLength(200)
-                .IsRequired();
-            builder.Property(x => x.Email)
-                .HasMaxLength(200)
-                .IsRequired();
             builder.Property(x => x.UserId)
                 .IsRequired();
             builder.Property(x => x.DiscountId)
@@ -63,6 +51,11 @@ namespace SShop.Domain.Configurations
                 .HasOne(x => x.User)
                 .WithMany(x => x.Orders)
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder
+                .HasOne(x => x.Address)
+                .WithMany(x => x.Orders)
+                .HasForeignKey(x => x.AddressId)
                 .OnDelete(DeleteBehavior.Restrict);
             builder
                 .HasMany(x => x.OrderItems)

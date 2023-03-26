@@ -35,9 +35,9 @@ namespace SShop.Services.MailJet
                 }
                 return false;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                throw new Exception(ex.Message);
             }
         }
     }

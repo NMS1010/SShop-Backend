@@ -9,7 +9,6 @@ namespace SShop.Domain.Entities
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public DateTime DateOfBirth { get; set; }
-        public string Address { get; set; }
         public string Gender { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime DateUpdated { get; set; }
@@ -21,5 +20,6 @@ namespace SShop.Domain.Entities
         public HashSet<Order> Orders { get; set; }
         public HashSet<CartItem> CartItems { get; set; }
         public HashSet<WishItem> WishItems { get; set; }
+        public HashSet<Address> Addresses { get; set; }
     }
 }

@@ -17,16 +17,7 @@ namespace SShop.ViewModels.Catalog.Orders
         public decimal Shipping { get; set; }
 
         [Required]
-        public string Address { get; set; }
-
-        [Required]
-        public string Name { get; set; }
-
-        [Required]
-        public string Email { get; set; }
-
-        [Required]
-        public string Phone { get; set; }
+        public int AddressId { get; set; }
 
         [Required]
         public int Status { get; set; }

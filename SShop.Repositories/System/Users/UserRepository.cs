@@ -19,6 +19,9 @@ using System.Text;
 using SShop.Services.MailJet;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Logging;
+using SShop.Utilities.Constants.Systems;
+using PayPal.Api;
+using SShop.ViewModels.System.Addresses;
 
 namespace SShop.Repositories.System.Users
 {
@@ -30,14 +33,14 @@ namespace SShop.Repositories.System.Users
         private readonly IConfiguration _configuration;
         private readonly IFileStorageService _fileStorage;
         private readonly AppDbContext _context;
-        private readonly IOrderRepository _orderServices;
+        private readonly IOrderRepository _orderRepositories;
         private readonly IMailJetServices _mailJetServices;
 
         public UserRepository(SignInManager<AppUser> signInManager,
             UserManager<AppUser> userManager,
             IConfiguration configuration,
             IFileStorageService fileStorage,
-            RoleManager<IdentityRole> roleManager, AppDbContext context, IOrderRepository orderServices,
+            RoleManager<IdentityRole> roleManager, AppDbContext context, IOrderRepository orderRepositories,
             IMailJetServices mailJetServices)
         {
             _userManager = userManager;
@@ -46,7 +49,7 @@ namespace SShop.Repositories.System.Users
             _fileStorage = fileStorage;
             _roleManager = roleManager;
             _context = context;
-            _orderServices = orderServices;
+            _orderRepositories = orderRepositories;
             _mailJetServices = mailJetServices;
         }
 
@@ -150,7 +153,7 @@ namespace SShop.Repositories.System.Users
             return new TokenViewModel { AccessToken = accessToken, RefreshToken = refreshToken };
         }
 
-        public async Task<(bool, string)> Register(RegisterRequest request)
+        public async Task<bool> Register(RegisterRequest request)
         {
             try
             {
@@ -163,9 +166,8 @@ namespace SShop.Repositories.System.Users
                     UserName = request.UserName,
                     PhoneNumber = request.PhoneNumber,
                     Gender = request.Gender,
-                    Status = request.Status,
+                    Status = USER_STATUS.ACTIVE,
                     DateCreated = DateTime.Now,
-                    Address = request.Address,
                     DateUpdated = DateTime.Now,
                     Avatar = await _fileStorage.SaveFile(request.Avatar)
                 };
@@ -173,16 +175,10 @@ namespace SShop.Repositories.System.Users
 
                 if (res.Succeeded)
                 {
-                    List<string> roles = new List<string>();
-                    foreach (var roleId in JsonConvert.DeserializeObject<string[]>(request.Roles[0]))
+                    List<string> roles = new()
                     {
-                        var role = await _context.Roles.FindAsync(roleId);
-                        if (role == null)
-                        {
-                            role = await _context.Roles.Where(x => x.Name.ToLower() == roleId.ToLower()).FirstOrDefaultAsync();
-                        }
-                        roles.Add(role.Name);
-                    }
+                        SystemConstants.UserRoles.CUSTOMER_ROLE
+                    };
                     await _userManager.AddToRolesAsync(user, roles);
                     if (!string.IsNullOrEmpty(request.LoginProvider))
                     {
@@ -195,18 +191,22 @@ namespace SShop.Repositories.System.Users
                         string confirmUrl = request.Host + $"/register-confirm?token={confirmToken}&email={user.Email}";
                         string content = "<h2>Chào " + user.FirstName + " " + user.LastName + ", </h2><h3>Link xác nhận đăng ký cho tài khoản <em>" + user.UserName + "</em>: <a href = \"" + confirmUrl + "\">Confirm account</a> </h3>" + "<h4>Bạn vui lòng xác nhận ngay khi thấy tin nhắn này. Xin cảm ơn!!!</h4>";
                         string title = "Xác nhận đăng ký tài khoản";
-                        await _mailJetServices.SendMail($"{user.FirstName} {user.LastName}", user.Email, content, title);
+                        bool isSend = await _mailJetServices.SendMail($"{user.FirstName} {user.LastName}", user.Email, content, title);
+                        if (!isSend)
+                        {
+                            throw new Exception("Cannot send mail");
+                        }
                     }
-                    return (true, "successfull");
+                    return true;
                 }
 
                 string error = "";
                 res.Errors.ToList().ForEach(x => error += (x.Description + "/n"));
-                return (false, error);
+                throw new Exception(error);
             }
-            catch
+            catch (Exception e)
             {
-                return (false, "Has error");
+                throw new Exception(e.Message);
             }
         }
 
@@ -228,7 +228,6 @@ namespace SShop.Repositories.System.Users
                 user.Gender = request.Gender;
                 user.Status = request.Status;
                 user.DateUpdated = DateTime.Now;
-                user.Address = request.Address;
                 if (request.ConfirmPassword != null)
                     user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, request.ConfirmPassword);
                 if (request.Avatar != null)
@@ -277,14 +276,12 @@ namespace SShop.Repositories.System.Users
                 PhoneNumber = user.PhoneNumber,
                 Email = user.Email,
                 UserName = user.UserName,
-                Address = user.Address,
                 Dob = user.DateOfBirth.ToString("yyyy-MM-dd"),
                 Gender = user.Gender,
                 Avatar = user.Avatar,
                 DateCreated = user.DateCreated.ToString(),
                 DateUpdated = user.DateUpdated.ToString(),
                 Status = user.Status,
-                Password = user.PasswordHash,
                 TotalCartItem = user.CartItems.Count,
                 TotalWishItem = user.WishItems.Count,
                 TotalOrders = user.Orders.Count,
@@ -301,6 +298,7 @@ namespace SShop.Repositories.System.Users
                 var users = await _userManager.Users
                     .Include(u => u.CartItems)
                     .Include(u => u.WishItems)
+                    .Include(u => u.Addresses)
                     .Include(u => u.Orders)
                     .ThenInclude(u => u.OrderItems)
                     .ToListAsync();
@@ -382,7 +380,7 @@ namespace SShop.Repositories.System.Users
                 List<OrderViewModel> orders = new List<OrderViewModel>();
                 foreach (var order in x.Orders)
                 {
-                    orders.Add(await _orderServices.RetrieveById(order.OrderId));
+                    orders.Add(await _orderRepositories.RetrieveById(order.OrderId));
                 }
                 user.Orders.Items = orders;
                 user.Orders.TotalItem = orders.Count;
@@ -491,9 +489,7 @@ namespace SShop.Repositories.System.Users
         public async Task<bool> CheckEmail(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return false;
-            return true;
+            return !(user == null);
         }
 
         public async Task<bool> ForgotPassword(string email, string host)
@@ -539,6 +535,18 @@ namespace SShop.Repositories.System.Users
                 user.RefreshToken = null;
                 await _userManager.UpdateAsync(user);
             }
+        }
+
+        public async Task<bool> CheckPhone(string phone)
+        {
+            var user = await _userManager.Users.Where(u => u.PhoneNumber == phone).FirstOrDefaultAsync();
+            return !(user == null);
+        }
+
+        public async Task<bool> CheckUsername(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            return !(user == null);
         }
     }
 }
