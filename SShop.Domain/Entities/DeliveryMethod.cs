@@ -9,7 +9,7 @@ namespace SShop.Domain.Entities
     public class DeliveryMethod
     {
         public int DeliveryMethodId { get; set; }
-        public int DeliveryMethodName { get; set; }
+        public string DeliveryMethodName { get; set; }
         public decimal Price { get; set; }
         public HashSet<Order> Orders { get; set; }
     }

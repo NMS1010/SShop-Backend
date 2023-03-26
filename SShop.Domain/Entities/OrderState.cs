@@ -9,7 +9,7 @@ namespace SShop.Domain.Entities
     public class OrderState
     {
         public int OrderStateId { get; set; }
-        public int OrderStateName { get; set; }
+        public string OrderStateName { get; set; }
         public HashSet<Order> Orders { get; set; }
     }
 }
