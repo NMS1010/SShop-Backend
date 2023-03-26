@@ -26,6 +26,9 @@ using SShop.ViewModels.System.Users;
 using SShop.Utilities.Constants.Systems;
 using SShop.BackEndAPI.Middlewares;
 using SShop.Repositories.System.Addresses;
+using SShop.Repositories.Catalog.OrderState;
+using SShop.Repositories.Catalog.PaymentMethod;
+using SShop.Repositories.Catalog.DeliveryMethod;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -55,6 +58,9 @@ services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 services.AddScoped<ICartItemRepository, CartItemRepository>();
 services.AddScoped<IWishItemRepository, WishItemRepository>();
 services.AddScoped<IAddressRepository, AddressRepository>();
+services.AddScoped<IOrderStateRepository, OrderStateRepository>();
+services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+services.AddScoped<IDeliveryMethodRepository, DeliveryMethodRepository>();
 
 services.AddScoped<IFileStorageService, FileStorageService>();
 services.AddScoped<IUserRepository, UserRepository>();

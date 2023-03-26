@@ -131,8 +131,8 @@ namespace SShop.BackEndAPI.Controllers
         {
             var res = await _userRepository.VerifyToken(email, token);
             if (!res)
-                return Ok(CustomAPIResponse<string>.Success("confirm-error", StatusCodes.Status400BadRequest));
-            return Ok(CustomAPIResponse<string>.Success("confirm-success", StatusCodes.Status200OK));
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status400BadRequest));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
         }
 
         [HttpGet("check-email")]
@@ -171,8 +171,8 @@ namespace SShop.BackEndAPI.Controllers
         {
             var res = await _userRepository.ForgotPassword(email, host);
             if (!res)
-                return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
-            return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
         }
 
         [HttpPost("reset-password")]
@@ -181,8 +181,8 @@ namespace SShop.BackEndAPI.Controllers
         {
             var res = await _userRepository.VerifyForgotPasswordToken(email, token, password);
             if (!res)
-                return Ok(CustomAPIResponse<string>.Success("error", StatusCodes.Status400BadRequest));
-            return Ok(CustomAPIResponse<string>.Success("success", StatusCodes.Status200OK));
+                return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));
         }
 
         [HttpPost("check-add")]
