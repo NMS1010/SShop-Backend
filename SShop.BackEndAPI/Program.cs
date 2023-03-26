@@ -25,6 +25,7 @@ using SShop.Services.MailJet;
 using SShop.ViewModels.System.Users;
 using SShop.Utilities.Constants.Systems;
 using SShop.BackEndAPI.Middlewares;
+using SShop.Repositories.System.Addresses;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -53,6 +54,7 @@ services.AddScoped<IOrderRepository, OrderRepository>();
 services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 services.AddScoped<ICartItemRepository, CartItemRepository>();
 services.AddScoped<IWishItemRepository, WishItemRepository>();
+services.AddScoped<IAddressRepository, AddressRepository>();
 
 services.AddScoped<IFileStorageService, FileStorageService>();
 services.AddScoped<IUserRepository, UserRepository>();

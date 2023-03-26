@@ -78,7 +78,6 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            request.Host = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}";
             await _userRepository.Register(request);
 
             return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status201Created));

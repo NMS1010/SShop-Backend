@@ -16,6 +16,7 @@ namespace SShop.ViewModels.Catalog.Brands
         [MaxLength(255)]
         public string Origin { get; set; }
 
+        [Required]
         public IFormFile Image { get; set; }
     }
 }
