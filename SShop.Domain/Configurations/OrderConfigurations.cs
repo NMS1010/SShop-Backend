@@ -28,6 +28,10 @@ namespace SShop.Domain.Configurations
                 .IsRequired();
             builder.Property(x => x.UserId)
                 .IsRequired();
+            builder.Property(x => x.DeliveryMethodId)
+                .IsRequired();
+            builder.Property(x => x.OrderStateId)
+                .IsRequired();
             builder.Property(x => x.DiscountId)
                 .IsRequired(false);
             builder
@@ -36,12 +40,6 @@ namespace SShop.Domain.Configurations
             builder
                 .Property(x => x.DateDone)
                 .IsRequired(false);
-            builder
-                .Property(x => x.Status)
-                .IsRequired();
-            builder
-                .Property(x => x.Payment)
-                .IsRequired();
             builder
                 .HasOne(x => x.Discount)
                 .WithMany(x => x.Orders)
@@ -56,6 +54,16 @@ namespace SShop.Domain.Configurations
                 .HasOne(x => x.Address)
                 .WithMany(x => x.Orders)
                 .HasForeignKey(x => x.AddressId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder
+                .HasOne(x => x.DeliveryMethod)
+                .WithMany(x => x.Orders)
+                .HasForeignKey(x => x.DeliveryMethodId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder
+                .HasOne(x => x.OrderState)
+                .WithMany(x => x.Orders)
+                .HasForeignKey(x => x.OrderStateId)
                 .OnDelete(DeleteBehavior.Restrict);
             builder
                 .HasMany(x => x.OrderItems)

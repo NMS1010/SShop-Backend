@@ -38,6 +38,9 @@ namespace SShop.Domain.EF
             modelBuilder.ApplyConfiguration(new OrderItemConfigurations());
             modelBuilder.ApplyConfiguration(new ReviewItemConfigurations());
             modelBuilder.ApplyConfiguration(new WishItemConfigurations());
+            modelBuilder.ApplyConfiguration(new OrderStateConfigurations());
+            modelBuilder.ApplyConfiguration(new DeliveryMethodConfigurations());
+            modelBuilder.ApplyConfiguration(new PaymentMethodConfigurations());
 
             foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
             {
@@ -59,5 +62,8 @@ namespace SShop.Domain.EF
         public DbSet<Province> Provinces { get; set; }
         public DbSet<District> Districts { get; set; }
         public DbSet<Ward> Wards { get; set; }
+        public DbSet<OrderState> OrderStates { get; set; }
+        public DbSet<DeliveryMethod> DeliveryMethods { get; set; }
+        public DbSet<PaymentMethod> PaymentMethods { get; set; }
     }
 }
