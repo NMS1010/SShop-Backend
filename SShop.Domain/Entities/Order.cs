@@ -10,9 +10,8 @@
         public int OrderStateId { get; set; }
         public int PaymentMethodId { get; set; }
         public decimal TotalItemPrice { get; set; }
-        public decimal Shipping { get; set; }
         public decimal TotalPrice { get; set; }
-
+        public DateTime? DatePaid { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime? DateDone { get; set; }
         public Address Address { get; set; }

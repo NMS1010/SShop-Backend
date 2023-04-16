@@ -19,10 +19,10 @@ namespace SShop.ViewModels.Catalog.Orders
         public string DiscountCode { get; set; }
         public decimal? DiscountValue { get; set; }
         public decimal TotalItemPrice { get; set; }
-        public decimal Shipping { get; set; }
         public decimal TotalPrice { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime? DateDone { get; set; }
+        public DateTime? DatePaid { get; set; }
         public int TotalItem { get; set; }
 
         public DeliveryMethodViewModel DeliveryMethod { get; set; }

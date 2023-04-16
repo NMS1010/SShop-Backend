@@ -33,16 +33,16 @@ namespace SShop.Repositories.Catalog.Orders
             try
             {
                 var orderState = await _context.OrderStates
-                    .Where(x => x.OrderStateName == "Đang chuẩn bị").FirstOrDefaultAsync();
+                    .Where(x => x.OrderStateName == "Đang chuẩn bị").FirstOrDefaultAsync() ?? throw new Exception("Error while handling action");
                 var order = new Order()
                 {
                     UserId = request.UserId,
                     DiscountId = request.DiscountId ?? null,
-                    Shipping = request.Shipping,
                     TotalItemPrice = request.TotalItemPrice,
                     TotalPrice = request.Shipping + request.TotalItemPrice,
                     AddressId = request.AddressId,
                     DateCreated = DateTime.Now,
+                    DateDone = null,
                     OrderStateId = orderState.OrderStateId,
                     PaymentMethodId = request.PaymentMethodId,
                     DeliveryMethodId = request.DeliveryMethodId
@@ -52,11 +52,7 @@ namespace SShop.Repositories.Catalog.Orders
                     .FirstOrDefaultAsync();
                 if (paymentMethod != null)
                 {
-                    order.DateDone = DateTime.Now;
-                }
-                else
-                {
-                    order.DateDone = null;
+                    order.DatePaid = DateTime.Now;
                 }
 
                 _context.Orders.Add(order);
@@ -65,7 +61,12 @@ namespace SShop.Repositories.Catalog.Orders
                     .Where(x => x.Id == request.UserId)
                     .Include(x => x.CartItems)
                     .ThenInclude(x => x.Product)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync() ?? throw new Exception("Error while handling action");
+                if(user.CartItems.Where(x => x.Status == 1).ToList().Count <= 0)
+                {
+                    await transaction.RollbackAsync();
+                    throw new Exception("Please select your product to order");
+                }
                 foreach (var cartItem in user.CartItems)
                 {
                     var orderItem = new OrderItem()
@@ -93,14 +94,14 @@ namespace SShop.Repositories.Catalog.Orders
                 if (!res)
                 {
                     await transaction.RollbackAsync();
-                    return -1;
+                    throw new Exception("Error while handling action");
                 }
                 return order.OrderId;
             }
-            catch
+            catch (Exception e)
             {
                 await transaction.RollbackAsync();
-                return -1;
+                throw e;
             }
         }
 
@@ -163,16 +164,16 @@ namespace SShop.Repositories.Catalog.Orders
             {
                 OrderId = order.OrderId,
                 UserId = order.UserId,
-                UserFullName = order.User.FirstName + order.User.LastName,
+                UserFullName = order.User.FirstName + " " + order.User.LastName,
                 UserPhone = order.User.PhoneNumber,
                 DiscountId = order?.DiscountId,
                 DiscountCode = order.Discount?.DiscountCode,
                 DiscountValue = order.Discount?.DiscountValue,
-                Shipping = order.Shipping,
                 TotalItemPrice = order.TotalItemPrice,
                 TotalPrice = order.TotalPrice,
                 DateCreated = order.DateCreated,
                 DateDone = order.DateDone,
+                DatePaid = order.DatePaid,
                 DeliveryMethod = new ViewModels.Catalog.DeliveryMethod.DeliveryMethodViewModel()
                 {
                     DeliveryMethodId = order.DeliveryMethodId,
@@ -231,7 +232,7 @@ namespace SShop.Repositories.Catalog.Orders
             }
             catch
             {
-                return null;
+                throw new Exception("Failed to get order list");
             }
         }
 
@@ -259,7 +260,7 @@ namespace SShop.Repositories.Catalog.Orders
             }
             catch
             {
-                return null;
+                throw new Exception("Failed to get order");
             }
         }
 
@@ -267,25 +268,29 @@ namespace SShop.Repositories.Catalog.Orders
         {
             try
             {
-                var order = await _context.Orders.FindAsync(request.OrderId);
-                if (order == null)
-                    return -1;
-                //if (order.Status == ORDER_STATUS.DELIVERED && request.Status != ORDER_STATUS.RETURNED)
-                //    return -1;
-                //order.Status = request.Status;
-                //if (request.Status == ORDER_STATUS.DELIVERED && order.Payment == ORDER_PAYMENT.COD)
-                //{
-                //    order.Payment = ORDER_PAYMENT.PAYPAL;
-                //    order.DateDone = DateTime.Now;
-                //}
+                var order = await _context.Orders.FindAsync(request.OrderId) ?? throw new KeyNotFoundException("Cannot find this order");
+                var orderState = await _context.OrderStates.FindAsync(request.OrderStateId) ?? throw new KeyNotFoundException("Cannot find this state"); ;
+                if (order.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED]
+                    && orderState.OrderStateName != ORDER_STATUS.OrderStatus[ORDER_STATUS.RETURNED])
+                    throw new Exception("This order has been deliveried, only be cancelled");
+                order.OrderStateId = request.OrderStateId;
+                if (orderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED] && order.PaymentMethod.PaymentMethodName == "COD")
+                {
+                    var d = DateTime.Now;
+                    order.DateDone = d;
+                    order.DatePaid = d;
+                }
 
                 _context.Orders.Update(order);
 
-                return await _context.SaveChangesAsync();
+                var res = await _context.SaveChangesAsync();
+                if (res < 1)
+                    throw new Exception("Failed to update order state");
+                return res;
             }
-            catch
+            catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -305,6 +310,54 @@ namespace SShop.Repositories.Catalog.Orders
 
             //return orderOverview;
             return null;
+        }
+
+        public async Task<PagedResult<OrderViewModel>> RetrieveByUserId(OrderGetPagingRequest request)
+        {
+            try
+            {
+                var query = await _context.Orders
+                    .Include(x => x.Discount)
+                    .Include(x => x.OrderItems)
+                    .Include(x => x.User)
+                    .Include(x => x.Discount)
+                    .Include(x => x.Address)
+                    .Include(x => x.PaymentMethod)
+                    .Include(x => x.OrderState)
+                    .Include(x => x.DeliveryMethod)
+                    .Where(x => x.UserId == request.UserId)
+                    .ToListAsync();
+                if (!string.IsNullOrEmpty(request.Keyword))
+                {
+                    query = query
+                        .Where(x => x.Address.SpecificAddress.Contains(request.Keyword))
+                        .ToList();
+                }
+                if (request.OrderStateId != 0)
+                {
+                    query = query
+                        .Where(x => x.OrderStateId == request.OrderStateId)
+                        .ToList();
+                }
+                var data = query
+                    .Skip((request.PageIndex - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .Select(x => GetOrderViewModel(x)).ToList();
+                foreach (var d in data)
+                {
+                    d.OrderItems = await _orderItemRepository.RetrieveByOrderId(d.OrderId);
+                    d.Address = await _addressRepository.RetrieveById(d.AddressId);
+                }
+                return new PagedResult<OrderViewModel>
+                {
+                    TotalItem = query.Count,
+                    Items = data
+                };
+            }
+            catch
+            {
+                throw new Exception("Failed to get order list");
+            }
         }
     }
 }

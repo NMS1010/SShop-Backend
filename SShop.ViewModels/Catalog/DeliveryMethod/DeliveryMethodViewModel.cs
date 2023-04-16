@@ -9,5 +9,6 @@ namespace SShop.ViewModels.Catalog.DeliveryMethod
     public class DeliveryMethodViewModel : DeliveryMethodRequest
     {
         public int DeliveryMethodId { get; set; }
+        public string Image { get; set; }
     }
 }

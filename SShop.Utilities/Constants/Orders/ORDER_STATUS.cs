@@ -13,9 +13,9 @@ namespace SShop.Utilities.Constants.Orders
 
         public static Dictionary<int, string> OrderStatus = new Dictionary<int, string>()
         {
-            {PENDING, "Đang đợi" },
+            {PENDING, "Đang chuẩn bị" },
             {READY_TO_SHIP, "Sẵn sàng chuyển đi" },
-            {ON_THE_WAY, "Đang chuyển" },
+            {ON_THE_WAY, "Đang vận chuyển" },
             {DELIVERED, "Đã hoàn thành" },
             {CANCELED, "Đã huỷ" },
             {RETURNED, "Hoàn trả" },

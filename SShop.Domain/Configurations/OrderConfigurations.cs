@@ -15,10 +15,6 @@ namespace SShop.Domain.Configurations
                 .Property(x => x.OrderId)
                 .UseIdentityColumn();
             builder
-                .Property(x => x.Shipping)
-                .HasColumnType("DECIMAL")
-                .IsRequired();
-            builder
                 .Property(x => x.TotalPrice)
                 .HasColumnType("DECIMAL")
                 .IsRequired();
@@ -39,6 +35,9 @@ namespace SShop.Domain.Configurations
                 .IsRequired();
             builder
                 .Property(x => x.DateDone)
+                .IsRequired(false);
+            builder
+                .Property(x => x.DatePaid)
                 .IsRequired(false);
             builder
                 .HasOne(x => x.Discount)

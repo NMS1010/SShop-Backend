@@ -4,6 +4,7 @@ using SShop.Domain.Entities;
 using SShop.Utilities.Constants.Products;
 using SShop.ViewModels.Catalog.CartItems;
 using SShop.ViewModels.Common;
+using System.Net.WebSockets;
 
 namespace SShop.Repositories.Catalog.CartItems
 {
@@ -16,15 +17,16 @@ namespace SShop.Repositories.Catalog.CartItems
             _context = context;
         }
 
-        public async Task<string> AddProductToCart(CartItemCreateRequest request)
+        public async Task<object> AddProductToCart(CartItemCreateRequest request)
         {
             try
             {
-                string responseStatus;
                 var product = await _context.Products.FindAsync(request.ProductId);
                 var cartItem = await _context.CartItems
                     .Where(x => x.ProductId == request.ProductId && x.UserId == request.UserId)
                     .FirstOrDefaultAsync();
+                var currentCart = 0;
+                var isUpdateQuantity = false;
                 if (product.Quantity > 0)
                 {
                     if (cartItem != null)
@@ -32,26 +34,37 @@ namespace SShop.Repositories.Catalog.CartItems
                         CartItemUpdateRequest req = new CartItemUpdateRequest()
                         {
                             CartItemId = cartItem.CartItemId,
-                            Quantity = cartItem.Quantity + 1,
-                            Status = request.Status
+                            Quantity = cartItem.Quantity + request.Quantity,
+                            Status = request.Status,
+                            UserId = request.UserId
                         };
 
-                        responseStatus = await Update(req) > 0 ? "repeat" : "error";
+                        var res = await UpdateCartItem(req);
+                        isUpdateQuantity = true;
                     }
                     else
                     {
-                        responseStatus = await Create(request) > 0 ? (await _context.Users.Where(x => x.Id == request.UserId).Include(x => x.CartItems).FirstOrDefaultAsync()).CartItems.Count + "-success" : "error";
+                        var res = await Create(request);
+                        if (res < 1)
+                        {
+                            throw new Exception("Cannot add product to cart");
+                        }
                     }
+                    currentCart = (await _context.Users.Where(x => x.Id == request.UserId).Include(x => x.CartItems).FirstOrDefaultAsync()).CartItems.Count;
                 }
                 else
                 {
-                    responseStatus = "expired";
+                    throw new Exception("Product quantity must larger than 0");
                 }
-                return responseStatus;
+                return new
+                {
+                    CurrentCartAmount = currentCart,
+                    IsUpdateQuantity = isUpdateQuantity,
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -100,16 +113,21 @@ namespace SShop.Repositories.Catalog.CartItems
         {
             try
             {
-                var cartItem = await _context.CartItems.FindAsync(cartItemId);
+                var cartItem = await _context.CartItems.FindAsync(cartItemId) ?? throw new KeyNotFoundException("Cannot find this item");
 
-                if (cartItem == null)
-                    return -1;
+                var userId = cartItem.UserId;
                 _context.CartItems.Remove(cartItem);
-                return await _context.SaveChangesAsync();
+                var res = await _context.SaveChangesAsync();
+                if (res < 1)
+                    throw new Exception("Failed to delete this item");
+
+                var currentCart = (await _context.Users.Where(x => x.Id == userId).Include(x => x.CartItems).FirstOrDefaultAsync()).CartItems.Count;
+
+                return currentCart;
             }
-            catch
+            catch (Exception e)
             {
-                return -1;
+                throw e;
             }
         }
 
@@ -203,7 +221,7 @@ namespace SShop.Repositories.Catalog.CartItems
             }
         }
 
-        public async Task<PagedResult<CartItemViewModel>> RetrieveCartByUserId(string userId)
+        public async Task<PagedResult<CartItemViewModel>> RetrieveCartByUserId(string userId, int status)
         {
             try
             {
@@ -213,6 +231,8 @@ namespace SShop.Repositories.Catalog.CartItems
                     .Include(x => x.Product)
                     .ThenInclude(x => x.ProductImages)
                     .ToListAsync();
+                if (status != -1)
+                    query = query.Where(x => x.Status == status).ToList();
                 var data = query
                     .Select(x => GetCartItemViewModel(x)).ToList();
 
@@ -228,25 +248,52 @@ namespace SShop.Repositories.Catalog.CartItems
             }
         }
 
-        public async Task<int> Update(CartItemUpdateRequest request)
+        public async Task<object> UpdateCartItem(CartItemUpdateRequest request)
         {
             try
             {
                 var cartItem = await _context.CartItems
                     .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
                     .Where(c => c.CartItemId == request.CartItemId)
-                    .FirstOrDefaultAsync();
-                if (cartItem == null)
-                    return -1;
+                    .FirstOrDefaultAsync() ?? throw new KeyNotFoundException("Cannot find cart item");
+
+                var product = await _context.Products.FindAsync(cartItem.ProductId);
+                if (product.Quantity < request.Quantity)
+                {
+                    throw new Exception("Product quantity is not enough");
+                }
                 cartItem.Quantity = request.Quantity;
 
                 cartItem.Status = request.Status;
-                return await _context.SaveChangesAsync();
+                var res = await _context.SaveChangesAsync();
+                if (res < 0)
+                    throw new Exception("Cannot update cart");
+
+                var query = await _context.CartItems
+                    .Where(x => x.UserId == request.UserId && x.Status == 1)
+                    .Include(x => x.User)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .ToListAsync();
+                var totalPrice = query.Select(x => x.Product.Price * x.Quantity)?.Sum();
+
+                return new
+                {
+                    TotalSelectedItem = query.Count,
+                    TotalPaymentPrice = totalPrice,
+                    cartItem = GetCartItemViewModel(cartItem)
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
+        }
+
+        public async Task<int> Update(CartItemUpdateRequest request)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<int> UpdateQuantityByProductId(int productId, int quantity)
@@ -266,6 +313,78 @@ namespace SShop.Repositories.Catalog.CartItems
             catch
             {
                 return -1;
+            }
+        }
+
+        public async Task<object> UpdateAllStatus(string userId, bool selectAll)
+        {
+            try
+            {
+                var cartItems = await _context.CartItems
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .Where(c => c.UserId == userId)
+                    .ToListAsync() ?? throw new KeyNotFoundException("Cannot find cart item");
+
+                cartItems.ForEach(c => c.Status = selectAll ? 1 : 0);
+
+                var res = await _context.SaveChangesAsync();
+                if (res < 0)
+                    throw new Exception("Cannot update cart");
+
+                var totalPrice = cartItems.Select(x => x.Product.Price * x.Quantity)?.Sum();
+
+                return new
+                {
+                    TotalSelectedItem = selectAll ? cartItems.Count : 0,
+                    TotalPaymentPrice = selectAll ? totalPrice : 0,
+                    CartItems = cartItems.Select(x => GetCartItemViewModel(x)).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<object> DeleteSelectedCartItem(string userId)
+        {
+            try
+            {
+                var cartItems = await _context.CartItems
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .Where(c => c.UserId == userId)
+                    .ToListAsync() ?? throw new KeyNotFoundException("Cannot find cart item");
+
+                foreach (var cartItem in cartItems)
+                {
+                    if (cartItem.Status == 1)
+                    {
+                        _context.CartItems.Remove(cartItem);
+                    }
+                }
+
+                var res = await _context.SaveChangesAsync();
+                if (res < 0)
+                    throw new Exception("Cannot delete cart items");
+
+                cartItems = await _context.CartItems
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .Where(c => c.UserId == userId)
+                    .ToListAsync() ?? throw new KeyNotFoundException("Cannot find cart item");
+                return new
+                {
+                    TotalSelectedItem = 0,
+                    TotalPaymentPrice = 0,
+                    CartItems = cartItems.Select(x => GetCartItemViewModel(x)).ToList(),
+                    CurrentCartAmount = cartItems.Count
+                };
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
         }
     }

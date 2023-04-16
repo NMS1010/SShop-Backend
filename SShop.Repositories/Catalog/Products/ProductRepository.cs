@@ -247,7 +247,9 @@ namespace SShop.Repositories.Catalog.Products
                     .FirstOrDefaultAsync();
                 if (product == null)
                     return null;
-                return GetProductViewModel(product);
+                var res = GetProductViewModel(product);
+                res.SubImages = await _productImageService.RetrieveAll(new ProductImageGetPagingRequest() { ProductId = product.ProductId });
+                return res;
             }
             catch
             {

@@ -10,7 +10,7 @@ namespace SShop.ViewModels.System.Addresses
     public class AddressUpdateRequest : AddressRequest
     {
         [Required]
-        public string AddressId { get; set; }
+        public int AddressId { get; set; }
 
         [Required]
         public int ProvinceId { get; set; }

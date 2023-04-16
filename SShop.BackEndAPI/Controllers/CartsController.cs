@@ -5,17 +5,18 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SShop.Repositories.Catalog.CartItems;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace SShop.BackEndAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Customer,Admin")]
-    public class CartItemsController : ControllerBase
+    public class CartsController : ControllerBase
     {
         private readonly ICartItemRepository _cartItemRepository;
 
-        public CartItemsController(ICartItemRepository cartItemRepository)
+        public CartsController(ICartItemRepository cartItemRepository)
         {
             _cartItemRepository = cartItemRepository;
         }
@@ -23,7 +24,7 @@ namespace SShop.BackEndAPI.Controllers
         [HttpPost("all")]
         public async Task<IActionResult> RetrieveAll([FromForm] CartItemGetPagingRequest request)
         {
-            var cartItems = await _cartItemRepository.RetrieveCartByUserId(request.UserId);
+            var cartItems = await _cartItemRepository.RetrieveCartByUserId(request.UserId, request.Status);
             if (cartItems == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get cart item list"));
             return Ok(CustomAPIResponse<PagedResult<CartItemViewModel>>.Success(cartItems, StatusCodes.Status200OK));
@@ -43,9 +44,9 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var responseStatus = await _cartItemRepository.AddProductToCart(request);
+            var res = await _cartItemRepository.AddProductToCart(request);
 
-            return Ok(CustomAPIResponse<string>.Success(responseStatus, StatusCodes.Status201Created));
+            return Ok(CustomAPIResponse<object>.Success(res, StatusCodes.Status201Created));
         }
 
         [HttpPut("update")]
@@ -53,19 +54,31 @@ namespace SShop.BackEndAPI.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var count = await _cartItemRepository.Update(request);
-            if (count <= 0)
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot update quantity"));
-            return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));
+            var res = await _cartItemRepository.UpdateCartItem(request);
+            return Ok(CustomAPIResponse<object>.Success(res, StatusCodes.Status200OK));
+        }
+
+        [HttpPut("update/all")]
+        public async Task<IActionResult> UpdateAllStatus([FromForm][Required] string userId, [FromForm][Required] bool selectAll)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            var res = await _cartItemRepository.UpdateAllStatus(userId, selectAll);
+            return Ok(CustomAPIResponse<object>.Success(res, StatusCodes.Status200OK));
         }
 
         [HttpDelete("delete/{cartItemId}")]
         public async Task<IActionResult> Delete(int cartItemId)
         {
-            int records = await _cartItemRepository.Delete(cartItemId);
-            if (records <= 0)
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot delete this product from cart"));
-            return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));
+            int currentCartAmount = await _cartItemRepository.Delete(cartItemId);
+            return Ok(CustomAPIResponse<object>.Success(new { CurrentCartAmount = currentCartAmount }, StatusCodes.Status200OK));
+        }
+
+        [HttpDelete("delete/all/{userId}")]
+        public async Task<IActionResult> DeleteSelectedCartItem([Required] string userId)
+        {
+            var res = await _cartItemRepository.DeleteSelectedCartItem(userId);
+            return Ok(CustomAPIResponse<object>.Success(res, StatusCodes.Status200OK));
         }
     }
 }

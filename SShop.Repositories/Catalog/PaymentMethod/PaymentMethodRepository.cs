@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SShop.Domain.EF;
+using SShop.Domain.Entities;
+using SShop.Services.FileStorage;
 using SShop.ViewModels.Catalog.PaymentMethod;
 using SShop.ViewModels.Common;
 using System;
@@ -13,10 +15,12 @@ namespace SShop.Repositories.Catalog.PaymentMethod
     public class PaymentMethodRepository : IPaymentMethodRepository
     {
         private readonly AppDbContext _context;
+        private readonly IFileStorageService _fileStorage;
 
-        public PaymentMethodRepository(AppDbContext context)
+        public PaymentMethodRepository(AppDbContext context, IFileStorageService fileStorage)
         {
             _context = context;
+            _fileStorage = fileStorage;
         }
 
         public async Task<int> Create(PaymentMethodCreateRequest request)
@@ -26,13 +30,17 @@ namespace SShop.Repositories.Catalog.PaymentMethod
                 var paymentMethod = new Domain.Entities.PaymentMethod()
                 {
                     PaymentMethodName = request.PaymentMethodName,
+                    Image = await _fileStorage.SaveFile(request.PaymentImage),
                 };
                 _context.PaymentMethods.Add(paymentMethod);
-                return await _context.SaveChangesAsync();
+                var count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle add");
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -40,17 +48,18 @@ namespace SShop.Repositories.Catalog.PaymentMethod
         {
             try
             {
-                var paymentMethod = await _context.PaymentMethods.FindAsync(id);
-                if (paymentMethod == null)
-                {
-                    return -1;
-                }
+                var paymentMethod = await _context.PaymentMethods.FindAsync(id) ?? throw new KeyNotFoundException("Cannot find this object");
+
                 _context.PaymentMethods.Remove(paymentMethod);
-                return await _context.SaveChangesAsync();
+                int count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle delete");
+                await _fileStorage.DeleteFile(Path.GetFileName(paymentMethod.Image));
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -60,6 +69,7 @@ namespace SShop.Repositories.Catalog.PaymentMethod
             {
                 PaymentMethodId = paymentMethod.PaymentMethodId,
                 PaymentMethodName = paymentMethod.PaymentMethodName,
+                Image = paymentMethod.Image,
             };
         }
 
@@ -86,7 +96,7 @@ namespace SShop.Repositories.Catalog.PaymentMethod
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -94,16 +104,12 @@ namespace SShop.Repositories.Catalog.PaymentMethod
         {
             try
             {
-                var paymentMethod = await _context.PaymentMethods.FindAsync(paymentMethodId);
-                if (paymentMethod == null)
-                {
-                    return null;
-                }
+                var paymentMethod = await _context.PaymentMethods.FindAsync(paymentMethodId) ?? throw new KeyNotFoundException("Cannot find this object");
                 return GetPaymentMethodViewModel(paymentMethod);
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -111,18 +117,22 @@ namespace SShop.Repositories.Catalog.PaymentMethod
         {
             try
             {
-                var paymentMethod = await _context.PaymentMethods.FindAsync(request.PaymentMethodId);
-                if (paymentMethod == null)
-                {
-                    return -1;
-                }
+                var paymentMethod = await _context.PaymentMethods.FindAsync(request.PaymentMethodId) ?? throw new KeyNotFoundException("Cannot find this object");
                 paymentMethod.PaymentMethodName = request.PaymentMethodName;
+                if (request.PaymentImage != null)
+                {
+                    await _fileStorage.DeleteFile(Path.GetFileName(paymentMethod.Image));
+                    paymentMethod.Image = await _fileStorage.SaveFile(request.PaymentImage);
+                }
                 _context.PaymentMethods.Update(paymentMethod);
-                return await _context.SaveChangesAsync();
+                var count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle update");
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
     }

@@ -20,6 +20,7 @@ namespace SShop.BackEndAPI.Controllers
         }
 
         [HttpGet("all")]
+        [AllowAnonymous]
         public async Task<IActionResult> RetrieveAll([FromQuery] DeliveryMethodGetPagingRequest request)
         {
             var deliveryMethods = await _deliveryMethodRepository.RetrieveAll(request);

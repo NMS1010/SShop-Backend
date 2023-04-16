@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using SShop.Repositories.Catalog.ProductImages;
 using SShop.Repositories.Catalog.Products;
@@ -25,6 +26,7 @@ namespace SShop.BackEndAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RetrieveAllPaging([FromQuery] ProductGetPagingRequest request)
         {
+            var domainName = HttpContext.Request.GetDisplayUrl();
             var products = await _productRepository.RetrieveAll(request);
             if (products == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get product list"));

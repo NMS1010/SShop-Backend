@@ -24,7 +24,9 @@ namespace SShop.Domain.Configurations
                 .Property(x => x.PaymentMethodName)
                 .HasMaxLength(100)
                 .IsRequired();
-
+            builder
+                .Property(x => x.Image)
+                .IsRequired();
             builder
                 .HasMany(x => x.Orders)
                 .WithOne(x => x.PaymentMethod)

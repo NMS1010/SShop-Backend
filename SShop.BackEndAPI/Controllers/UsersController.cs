@@ -4,6 +4,7 @@ using PayPal.Api;
 using SShop.Repositories.System.Users;
 using SShop.ViewModels.Common;
 using SShop.ViewModels.System.Users;
+using System.ComponentModel.DataAnnotations;
 
 namespace SShop.BackEndAPI.Controllers
 {
@@ -26,6 +27,16 @@ namespace SShop.BackEndAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
             var resToken = await _userRepository.Authenticate(request);
+            return Ok(CustomAPIResponse<TokenViewModel>.Success(resToken, StatusCodes.Status200OK));
+        }
+
+        [HttpPost("google-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLogin([FromForm] GoogleLoginRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            var resToken = await _userRepository.AuthenticateWithGoogle(request.Email, request.LoginProvider, request.ProviderKey);
             return Ok(CustomAPIResponse<TokenViewModel>.Success(resToken, StatusCodes.Status200OK));
         }
 
@@ -58,19 +69,6 @@ namespace SShop.BackEndAPI.Controllers
             return Ok(CustomAPIResponse<string>.Success("Revoke token for all user successfully", StatusCodes.Status200OK));
         }
 
-        [HttpPost("google-login")]
-        [AllowAnonymous]
-        public async Task<IActionResult> LoginWithGoogle([FromForm] string email, [FromForm] string loginProvider, [FromForm] string providerKey)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            var resToken = await _userRepository.AuthenticateWithGoogle(email, loginProvider, providerKey);
-            if (string.IsNullOrEmpty(resToken))
-            {
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "error"));
-            }
-            return Ok(CustomAPIResponse<string>.Success(resToken, StatusCodes.Status200OK));
-        }
 
         [HttpPost("register")]
         [AllowAnonymous]
@@ -127,9 +125,9 @@ namespace SShop.BackEndAPI.Controllers
 
         [HttpGet("register-confirm")]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterConfirm([FromQuery] string email, [FromQuery] string token)
+        public async Task<IActionResult> RegisterConfirm([FromQuery][Required] string email, [FromQuery][Required] string token, [FromQuery][Required] string host)
         {
-            var res = await _userRepository.VerifyToken(email, token);
+            var res = await _userRepository.VerifyToken(email, token, host);
             if (!res)
                 return Ok(CustomAPIResponse<bool>.Success(false, StatusCodes.Status400BadRequest));
             return Ok(CustomAPIResponse<bool>.Success(true, StatusCodes.Status200OK));

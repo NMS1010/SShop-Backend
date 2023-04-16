@@ -12,5 +12,6 @@ namespace SShop.Domain.Entities
         public string DeliveryMethodName { get; set; }
         public decimal Price { get; set; }
         public HashSet<Order> Orders { get; set; }
+        public string Image { get; set; }
     }
 }

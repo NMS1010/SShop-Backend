@@ -10,9 +10,8 @@ namespace SShop.ViewModels.Catalog.CartItems
         [Required]
         public string UserId { get; set; }
 
-        [Required]
         public int Quantity { get; set; } = 1;
 
-        public int Status { get; set; } = 1;
+        public int Status { get; set; } = 0;
     }
 }

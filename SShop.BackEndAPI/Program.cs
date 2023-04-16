@@ -130,7 +130,14 @@ services
     {
         options.LoginPath = "/admin/login";
         options.ExpireTimeSpan = TimeSpan.FromDays(1);
-    }); ;
+    })
+    .AddGoogle(opts =>
+    {
+        IConfigurationSection googleAuthNSection = configuration.GetSection("Authentication:Google");
+        opts.ClientId = googleAuthNSection["ClientId"];
+        opts.ClientSecret = googleAuthNSection["ClientSecret"];
+        opts.SignInScheme = IdentityConstants.ExternalScheme;
+    });
 services.AddAuthorization();
 services.AddSession();
 services.AddCors(options =>

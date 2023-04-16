@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -11,5 +12,8 @@ namespace SShop.ViewModels.Catalog.DeliveryMethod
     {
         [Required]
         public int DeliveryMethodId { get; set; }
+
+        [Required]
+        public IFormFile DeliveryImage { get; set; }
     }
 }

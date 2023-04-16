@@ -39,7 +39,7 @@ namespace SShop.BackEndAPI.Controllers
             return Ok(CustomAPIResponse<AddressViewModel>.Success(address, StatusCodes.Status200OK));
         }
 
-        [HttpGet("{userId}")]
+        [HttpGet("address/{userId}")]
         public async Task<IActionResult> RetrieveByUserId(string userId)
         {
             var addresses = await _addressRepository.GetAddressByUserId(userId);

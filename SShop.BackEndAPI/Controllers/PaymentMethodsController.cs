@@ -21,6 +21,7 @@ namespace SShop.BackEndAPI.Controllers
         }
 
         [HttpGet("all")]
+        [AllowAnonymous]
         public async Task<IActionResult> RetrieveAll([FromQuery] PaymentMethodGetPagingRequest request)
         {
             var paymentMethods = await _paymentMethodRepository.RetrieveAll(request);

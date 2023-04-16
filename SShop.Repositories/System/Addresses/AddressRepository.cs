@@ -26,6 +26,11 @@ namespace SShop.Repositories.System.Addresses
         {
             try
             {
+                var dt = await _context.Addresses.Where(x => x.UserId == request.UserId && x.IsDefault == true).FirstOrDefaultAsync();
+                if (dt != null && request.IsDefault == true)
+                {
+                    throw new Exception("One user must have one default address");
+                }
                 var address = new Address()
                 {
                     SpecificAddress = request.SpecificAddress,
@@ -55,7 +60,7 @@ namespace SShop.Repositories.System.Addresses
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -63,17 +68,17 @@ namespace SShop.Repositories.System.Addresses
         {
             try
             {
-                var address = await _context.Addresses.FindAsync(id);
-                if (address == null)
+                var address = await _context.Addresses.FindAsync(id) ?? throw new KeyNotFoundException("Cannot find this address");
+                if (address.IsDefault)
                 {
-                    return -1;
+                    throw new Exception("Cannot remove default address");
                 }
                 _context.Addresses.Remove(address);
                 return await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -95,7 +100,8 @@ namespace SShop.Repositories.System.Addresses
                 LastName = address.LastName,
                 Phone = address.Phone,
                 UserId = address.UserId,
-                IsDefault = address.IsDefault
+                IsDefault = address.IsDefault,
+                AddressId = address.AddressId,
             };
         }
 
@@ -119,7 +125,7 @@ namespace SShop.Repositories.System.Addresses
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -150,7 +156,7 @@ namespace SShop.Repositories.System.Addresses
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -163,16 +169,12 @@ namespace SShop.Repositories.System.Addresses
                     .Include(x => x.Province)
                     .Include(x => x.District)
                     .Include(x => x.Ward)
-                    .FirstOrDefaultAsync();
-                if (address == null)
-                {
-                    return null;
-                }
+                    .FirstOrDefaultAsync() ?? throw new KeyNotFoundException("Cannot find this address");
                 return GetAddressViewModel(address);
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -181,11 +183,8 @@ namespace SShop.Repositories.System.Addresses
             var transaction = _context.Database.BeginTransaction();
             try
             {
-                var address = await _context.Addresses.FindAsync(request.AddressId);
-                if (address == null)
-                {
-                    return -1;
-                }
+                var address = await _context.Addresses.FindAsync(request.AddressId) ?? throw new KeyNotFoundException("Cannot find this address");
+
                 address.Province = new Province()
                 {
                     ProvinceCode = request.ProvinceCode,
@@ -205,17 +204,34 @@ namespace SShop.Repositories.System.Addresses
                 address.LastName = request.LastName;
                 address.SpecificAddress = request.SpecificAddress;
                 address.Phone = request.Phone;
+                if (request.IsDefault)
+                {
+                    var dt = await _context.Addresses.Where(x => x.UserId == request.UserId && x.IsDefault == true).FirstOrDefaultAsync();
+                    if (dt != null)
+                    {
+                        dt.IsDefault = false;
+                        _context.Addresses.Update(dt);
+                    }
+                }
+                else if (address.IsDefault && !request.IsDefault)
+                {
+                    var dt = await _context.Addresses.Where(x => x.UserId == request.UserId && x.IsDefault == true).ToListAsync();
+                    if (dt.Count == 1)
+                    {
+                        throw new Exception("Account must have a default address");
+                    }
+                }
                 address.IsDefault = request.IsDefault;
                 _context.Addresses.Update(address);
 
                 var province = await _context.Provinces.FindAsync(request.ProvinceId);
-                province.Addresses.Remove(address);
+                _context.Provinces.Remove(province);
 
                 var district = await _context.Districts.FindAsync(request.DistrictId);
-                district.Addresses.Remove(address);
+                _context.Districts.Remove(district);
 
                 var ward = await _context.Wards.FindAsync(request.WardId);
-                ward.Addresses.Remove(address);
+                _context.Wards.Remove(ward);
 
                 int res = await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -224,7 +240,7 @@ namespace SShop.Repositories.System.Addresses
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                return -1;
+                throw ex;
             }
         }
     }

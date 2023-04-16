@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SShop.Domain.EF;
+using SShop.Domain.Entities;
 using SShop.Repositories.Catalog.DeliveryMethod;
+using SShop.Services.FileStorage;
 using SShop.ViewModels.Catalog.DeliveryMethod;
 using SShop.ViewModels.Common;
 using System;
@@ -14,10 +16,12 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
     public class DeliveryMethodRepository : IDeliveryMethodRepository
     {
         private readonly AppDbContext _context;
+        private readonly IFileStorageService _fileStorage;
 
-        public DeliveryMethodRepository(AppDbContext context)
+        public DeliveryMethodRepository(AppDbContext context, IFileStorageService fileStorage)
         {
             _context = context;
+            _fileStorage = fileStorage;
         }
 
         public async Task<int> Create(DeliveryMethodCreateRequest request)
@@ -27,14 +31,18 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
                 var deliveryMethod = new Domain.Entities.DeliveryMethod()
                 {
                     DeliveryMethodName = request.DeliveryMethodName,
-                    Price = request.DeliveryMethodPrice
+                    Price = request.DeliveryMethodPrice,
+                    Image = await _fileStorage.SaveFile(request.DeliveryImage),
                 };
                 _context.DeliveryMethods.Add(deliveryMethod);
-                return await _context.SaveChangesAsync();
+                var count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle add");
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -42,17 +50,17 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
         {
             try
             {
-                var deliveryMethod = await _context.DeliveryMethods.FindAsync(id);
-                if (deliveryMethod == null)
-                {
-                    return -1;
-                }
+                var deliveryMethod = await _context.DeliveryMethods.FindAsync(id) ?? throw new KeyNotFoundException("Cannot find this object");
                 _context.DeliveryMethods.Remove(deliveryMethod);
-                return await _context.SaveChangesAsync();
+                int count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle delete");
+                await _fileStorage.DeleteFile(Path.GetFileName(deliveryMethod.Image));
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
 
@@ -62,7 +70,8 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
             {
                 DeliveryMethodId = deliveryMethod.DeliveryMethodId,
                 DeliveryMethodName = deliveryMethod.DeliveryMethodName,
-                DeliveryMethodPrice = deliveryMethod.Price
+                DeliveryMethodPrice = deliveryMethod.Price,
+                Image = deliveryMethod.Image,
             };
         }
 
@@ -89,7 +98,7 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -97,16 +106,13 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
         {
             try
             {
-                var deliveryMethod = await _context.DeliveryMethods.FindAsync(deliveryMethodId);
-                if (deliveryMethod == null)
-                {
-                    return null;
-                }
+                var deliveryMethod = await _context.DeliveryMethods.FindAsync(deliveryMethodId) ?? throw new KeyNotFoundException("Cannot find this object");
+
                 return GetDeliveryMethodViewModel(deliveryMethod);
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
         }
 
@@ -114,19 +120,23 @@ namespace SShop.Repositories.Catalog.DeliveryMethod
         {
             try
             {
-                var deliveryMethod = await _context.DeliveryMethods.FindAsync(request.DeliveryMethodId);
-                if (deliveryMethod == null)
-                {
-                    return -1;
-                }
+                var deliveryMethod = await _context.DeliveryMethods.FindAsync(request.DeliveryMethodId) ?? throw new KeyNotFoundException("Cannot find this object");
                 deliveryMethod.DeliveryMethodName = request.DeliveryMethodName;
                 deliveryMethod.Price = request.DeliveryMethodPrice;
+                if (request.DeliveryImage != null)
+                {
+                    await _fileStorage.DeleteFile(Path.GetFileName(deliveryMethod.Image));
+                    deliveryMethod.Image = await _fileStorage.SaveFile(request.DeliveryImage);
+                }
                 _context.DeliveryMethods.Update(deliveryMethod);
-                return await _context.SaveChangesAsync();
+                var count = await _context.SaveChangesAsync();
+                if (count <= 0)
+                    throw new Exception("Cannot handle update");
+                return count;
             }
             catch (Exception ex)
             {
-                return -1;
+                throw ex;
             }
         }
     }

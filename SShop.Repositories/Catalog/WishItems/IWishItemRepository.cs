@@ -9,6 +9,8 @@ namespace SShop.Repositories.Catalog.WishItems
     {
         Task<PagedResult<WishItemViewModel>> RetrieveWishByUserId(string userId);
 
-        Task<string> AddProductToWish(WishItemCreateRequest request);
+        Task<object> AddProductToWish(WishItemCreateRequest request);
+
+        Task<int> DeleteAll(string userId);
     }
 }

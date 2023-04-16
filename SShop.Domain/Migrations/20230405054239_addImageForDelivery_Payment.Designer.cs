@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SShop.Domain.EF;
 
 namespace SShop.Domain.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230405054239_addImageForDelivery_Payment")]
+    partial class addImageForDelivery_Payment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -503,9 +505,6 @@ namespace SShop.Domain.Migrations
                     b.Property<DateTime?>("DateDone")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("DatePaid")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("DeliveryMethodId")
                         .HasColumnType("int");
 
@@ -517,6 +516,9 @@ namespace SShop.Domain.Migrations
 
                     b.Property<int>("PaymentMethodId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Shipping")
+                        .HasColumnType("DECIMAL");
 
                     b.Property<decimal>("TotalItemPrice")
                         .HasColumnType("DECIMAL");

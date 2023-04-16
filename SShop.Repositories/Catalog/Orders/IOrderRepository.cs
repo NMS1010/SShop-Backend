@@ -1,6 +1,7 @@
 ﻿using SShop.ViewModels.Catalog.Orders;
 using SShop.Repositories.Common.Interfaces;
 using System.Threading.Tasks;
+using SShop.ViewModels.Common;
 
 namespace SShop.Repositories.Catalog.Orders
 {
@@ -8,5 +9,7 @@ namespace SShop.Repositories.Catalog.Orders
         IRetrieveEntity<OrderViewModel, OrderGetPagingRequest, int>
     {
         Task<OrderOverviewViewModel> GetOverviewStatictis();
+
+        Task<PagedResult<OrderViewModel>> RetrieveByUserId(OrderGetPagingRequest request);
     }
 }

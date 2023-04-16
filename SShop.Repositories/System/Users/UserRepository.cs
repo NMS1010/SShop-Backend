@@ -133,10 +133,10 @@ namespace SShop.Repositories.System.Users
             if (user == null)
                 throw new KeyNotFoundException("Username/password is incorrect");
             var res = await _signInManager.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
-            //if (res.IsLockedOut)
-            //{
-            //    throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
-            //}
+            if (res.IsLockedOut)
+            {
+                throw new AccessViolationException("Your account has been lockout, unlock in " + user.LockoutEnd);
+            }
             if (!res.Succeeded)
                 throw new KeyNotFoundException("Username/password is incorrect");
             if (user.Status == USER_STATUS.IN_ACTIVE)
@@ -149,12 +149,15 @@ namespace SShop.Repositories.System.Users
             DateTime refreshTokenExpiredTime = DateTime.Now.AddDays(7);
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiredTime = refreshTokenExpiredTime;
-            await _userManager.UpdateAsync(user);
+            var isSuccess = await _userManager.UpdateAsync(user);
+            if (!isSuccess.Succeeded)
+                throw new Exception("Cannot login, please contact administrator");
             return new TokenViewModel { AccessToken = accessToken, RefreshToken = refreshToken };
         }
 
         public async Task<bool> Register(RegisterRequest request)
         {
+            var transaction = _context.Database.BeginTransaction();
             try
             {
                 var user = new AppUser()
@@ -186,28 +189,38 @@ namespace SShop.Repositories.System.Users
                     }
                     if (!string.IsNullOrEmpty(request.Host))
                     {
-                        string confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                        confirmToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(confirmToken));
-                        string confirmUrl = request.Host + $"/register-confirm?token={confirmToken}&email={user.Email}";
-                        string content = "<h2>Chào " + user.FirstName + " " + user.LastName + ", </h2><h3>Link xác nhận đăng ký cho tài khoản <em>" + user.UserName + "</em>: <a href = \"" + confirmUrl + "\">Confirm account</a> </h3>" + "<h4>Bạn vui lòng xác nhận ngay khi thấy tin nhắn này. Xin cảm ơn!!!</h4>";
-                        string title = "Xác nhận đăng ký tài khoản";
-                        bool isSend = await _mailJetServices.SendMail($"{user.FirstName} {user.LastName}", user.Email, content, title);
+                        bool isSend = await SendConfirmToken(user, request.Host);
                         if (!isSend)
                         {
+                            await transaction.RollbackAsync();
                             throw new Exception("Cannot send mail");
                         }
                     }
+                    await transaction.CommitAsync();
                     return true;
                 }
 
                 string error = "";
                 res.Errors.ToList().ForEach(x => error += (x.Description + "/n"));
+                await transaction.RollbackAsync();
                 throw new Exception(error);
             }
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                await transaction.RollbackAsync();
+                throw e;
             }
+        }
+
+        public async Task<bool> SendConfirmToken(AppUser user, string host)
+        {
+            string confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            confirmToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(confirmToken));
+            string confirmUrl = host + $"/register-confirm?token={confirmToken}&email={user.Email}";
+            string content = "<h2>Chào " + user.FirstName + " " + user.LastName + ", </h2><h3>Link xác nhận đăng ký cho tài khoản <em>" + user.UserName + "</em>: <a href = \"" + confirmUrl + "\">Confirm account</a> </h3>" + "<h4>Bạn vui lòng xác nhận ngay khi thấy tin nhắn này. Xin cảm ơn!!!</h4>";
+            string title = "Xác nhận đăng ký tài khoản";
+            bool isSend = await _mailJetServices.SendMail($"{user.FirstName} {user.LastName}", user.Email, content, title);
+            return isSend;
         }
 
         public async Task<(bool, string)> Update(UserUpdateRequest request)
@@ -459,23 +472,28 @@ namespace SShop.Repositories.System.Users
             return exist;
         }
 
-        public async Task<string> AuthenticateWithGoogle(string email, string loginProvider, string providerKey)
+        public async Task<TokenViewModel> AuthenticateWithGoogle(string email, string loginProvider, string providerKey)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return null;
+            var user = await _userManager.FindByEmailAsync(email) ?? throw new KeyNotFoundException("Cannot find your account");
             var res = await _signInManager.ExternalLoginSignInAsync(loginProvider, providerKey, false);
             if (!res.Succeeded)
-                return null;
+                throw new AccessViolationException("Cannot login with your Google account");
             if (user.Status == USER_STATUS.IN_ACTIVE)
-                return "banned";
+                throw new AccessViolationException("Your account has been banned");
             if (!user.EmailConfirmed)
-                return "unconfirm";
-
-            return await WriteJWT(user);
+                throw new AccessViolationException("Your account hasn't been confirm");
+            string accessToken = await WriteJWT(user);
+            string refreshToken = GenerateRefreshToken();
+            DateTime refreshTokenExpiredTime = DateTime.Now.AddDays(7);
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiredTime = refreshTokenExpiredTime;
+            var isSuccess = await _userManager.UpdateAsync(user);
+            if (!isSuccess.Succeeded)
+                throw new Exception("Cannot login, please contact administrator");
+            return new TokenViewModel { AccessToken = accessToken, RefreshToken = refreshToken };
         }
 
-        public async Task<bool> VerifyToken(string email, string token)
+        public async Task<bool> VerifyToken(string email, string token, string host)
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
@@ -483,6 +501,7 @@ namespace SShop.Repositories.System.Users
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
             var result = await _userManager.ConfirmEmailAsync(user, code);
             if (result.Succeeded) return true;
+            await SendConfirmToken(user, host);
             return false;
         }
 

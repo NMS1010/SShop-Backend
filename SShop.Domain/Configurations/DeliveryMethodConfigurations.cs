@@ -24,7 +24,9 @@ namespace SShop.Domain.Configurations
                 .Property(x => x.DeliveryMethodName)
                 .HasMaxLength(100)
                 .IsRequired();
-
+            builder
+                .Property(x => x.Image)
+                .IsRequired();
             builder
                 .Property(x => x.Price)
                 .HasColumnType("DECIMAL")

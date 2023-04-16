@@ -9,11 +9,11 @@ namespace SShop.BackEndAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin,Customer")]
-    public class WishItemsController : ControllerBase
+    public class WishsController : ControllerBase
     {
         private readonly IWishItemRepository _wishItemRepository;
 
-        public WishItemsController(IWishItemRepository wishItemRepository)
+        public WishsController(IWishItemRepository wishItemRepository)
         {
             _wishItemRepository = wishItemRepository;
         }
@@ -41,9 +41,9 @@ namespace SShop.BackEndAPI.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> Create([FromForm] WishItemCreateRequest request)
         {
-            var statusRes = await _wishItemRepository.AddProductToWish(request);
+            var res = await _wishItemRepository.AddProductToWish(request);
 
-            return Ok(CustomAPIResponse<string>.Success(statusRes, StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<object>.Success(res, StatusCodes.Status200OK));
         }
 
         [HttpPut("update")]
@@ -59,7 +59,15 @@ namespace SShop.BackEndAPI.Controllers
         [HttpDelete("delete/{wishItemId}")]
         public async Task<IActionResult> Delete(int wishItemId)
         {
-            var count = await _wishItemRepository.Delete(wishItemId);
+            var currentWishAmount = await _wishItemRepository.Delete(wishItemId);
+
+            return Ok(CustomAPIResponse<object>.Success(new { CurrentWishAmount = currentWishAmount }, StatusCodes.Status200OK));
+        }
+
+        [HttpDelete("delete/all/{userId}")]
+        public async Task<IActionResult> DeleteAll(string userId)
+        {
+            var count = await _wishItemRepository.DeleteAll(userId);
 
             if (count <= 0)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "cannot delete this wish item"));

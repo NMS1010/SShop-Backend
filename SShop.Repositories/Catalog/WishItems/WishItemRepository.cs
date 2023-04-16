@@ -16,14 +16,37 @@ namespace SShop.Repositories.Catalog.WishItems
             _context = context;
         }
 
-        public async Task<string> AddProductToWish(WishItemCreateRequest request)
+        public async Task<object> AddProductToWish(WishItemCreateRequest request)
         {
-            var wishItem = await _context.WishItems.Where(x => x.ProductId == request.ProductId && x.UserId == request.UserId).FirstOrDefaultAsync();
-            if (wishItem != null)
+            try
             {
-                return "error";
+                var wishItem = await _context.WishItems
+                    .Where(x => x.ProductId == request.ProductId && x.UserId == request.UserId)
+                    .FirstOrDefaultAsync();
+                if (wishItem != null)
+                {
+                    throw new Exception("Product has already been in your wish list");
+                }
+
+                var currentWishAmount = 0;
+                var res = await Create(request);
+                if (res < 1)
+                {
+                    throw new Exception("Cannot add product to your wish list");
+                }
+                currentWishAmount = (await _context.Users
+                    .Where(x => x.Id == request.UserId)
+                    .Include(x => x.WishItems)
+                    .FirstOrDefaultAsync()).WishItems.Count;
+                return new
+                {
+                    CurrentWishAmount = currentWishAmount
+                };
             }
-            return await Create(request) > 0 ? ((await _context.Users.Where(x => x.Id == request.UserId).Include(x => x.WishItems).FirstOrDefaultAsync()).WishItems.Count) + "success" : "error";
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public async Task<int> Create(WishItemCreateRequest request)
@@ -53,16 +76,48 @@ namespace SShop.Repositories.Catalog.WishItems
         {
             try
             {
-                var wishItem = await _context.WishItems.FindAsync(wishItemId);
-                if (wishItem == null)
-                    return -1;
+                var wishItem = await _context.WishItems.FindAsync(wishItemId)
+                    ?? throw new KeyNotFoundException("Wish item cannot be found");
                 _context.WishItems.Remove(wishItem);
 
-                return await _context.SaveChangesAsync();
+                var res = await _context.SaveChangesAsync();
+                if (res < 1)
+                {
+                    throw new Exception("Cannot delete product from your wish list");
+                }
+                var currentWishAmount = (await _context.Users
+                    .Where(x => x.Id == wishItem.UserId)
+                    .Include(x => x.WishItems)
+                    .FirstOrDefaultAsync()).WishItems.Count;
+                return currentWishAmount;
             }
-            catch
+            catch (Exception ex)
             {
-                return -1;
+                throw ex;
+            }
+        }
+
+        public async Task<int> DeleteAll(string userId)
+        {
+            try
+            {
+                var wishItems = await _context.WishItems
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync() ?? throw new KeyNotFoundException("Cannot find wish item");
+                foreach (var wishItem in wishItems)
+                {
+                    _context.WishItems.Remove(wishItem);
+                }
+                var res = await _context.SaveChangesAsync();
+                if (res < 1)
+                {
+                    throw new Exception("Cannot delete all item in your wish");
+                }
+                return res;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
         }
 

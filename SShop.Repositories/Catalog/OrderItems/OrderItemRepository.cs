@@ -69,7 +69,9 @@ namespace SShop.Repositories.Catalog.OrderItems
                             .FirstOrDefault()?.Path,
                 Quantity = orderItem.Quantity,
                 UnitPrice = orderItem.UnitPrice,
-                TotalPrice = orderItem.TotalPrice
+                TotalPrice = orderItem.TotalPrice,
+                ProductBrand = orderItem.Product.Brand.BrandName,
+                ProductCategory = orderItem.Product.Category.Name
             };
         }
 
@@ -80,6 +82,10 @@ namespace SShop.Repositories.Catalog.OrderItems
                 var query = await _context.OrderItems
                         .Include(x => x.Product)
                         .ThenInclude(x => x.ProductImages)
+                        .Include(x => x.Product)
+                        .ThenInclude(x => x.Category)
+                        .Include(x => x.Product)
+                        .ThenInclude(x => x.Brand)
                     .ToListAsync();
                 if (!string.IsNullOrEmpty(request.Keyword))
                 {
@@ -106,9 +112,13 @@ namespace SShop.Repositories.Catalog.OrderItems
             try
             {
                 var orderItem = await _context.OrderItems
+                    .Where(x => x.OrderItemId == orderItemId)
                     .Include(x => x.Product)
                     .ThenInclude(x => x.ProductImages)
-                    .Where(x => x.OrderItemId == orderItemId)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.Category)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.Brand)
                     .FirstOrDefaultAsync();
                 if (orderItem == null)
                     return null;
@@ -128,6 +138,10 @@ namespace SShop.Repositories.Catalog.OrderItems
                     .Where(x => x.OrderId == orderId)
                     .Include(x => x.Product)
                     .ThenInclude(x => x.ProductImages)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.Category)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.Brand)
                     .ToListAsync();
                 var data = query
                 .Select(x => GetOrderItemViewModel(x)).ToList();

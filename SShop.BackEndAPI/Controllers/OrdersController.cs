@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using SShop.Repositories.Catalog.Orders;
 using SShop.ViewModels.Catalog.Orders;
 using SShop.ViewModels.Common;
+using System.ComponentModel.DataAnnotations;
 
 namespace SShop.BackEndAPI.Controllers
 {
@@ -23,6 +25,17 @@ namespace SShop.BackEndAPI.Controllers
         public async Task<IActionResult> RetrieveAll([FromQuery] OrderGetPagingRequest request)
         {
             var orders = await _orderRepository.RetrieveAll(request);
+
+            if (orders == null)
+                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get order list"));
+            return Ok(CustomAPIResponse<PagedResult<OrderViewModel>>.Success(orders, StatusCodes.Status200OK));
+        }
+
+        [HttpGet("user-order")]
+        [Authorize(Roles = "Admin, Customer")]
+        public async Task<IActionResult> RetrieveByUserId([FromQuery] OrderGetPagingRequest request)
+        {
+            var orders = await _orderRepository.RetrieveByUserId(request);
 
             if (orders == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get order list"));
@@ -51,6 +64,7 @@ namespace SShop.BackEndAPI.Controllers
         }
 
         [HttpPost("add")]
+        [Authorize(Roles = "Admin, Customer")]
         public async Task<IActionResult> Create([FromForm] OrderCreateRequest request)
         {
             var orderId = await _orderRepository.Create(request);

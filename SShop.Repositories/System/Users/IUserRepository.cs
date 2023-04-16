@@ -15,11 +15,11 @@ namespace SShop.Repositories.System.Users
 
         Task RevokeAllToken();
 
-        Task<string> AuthenticateWithGoogle(string email, string loginProvider, string providerKey);
+        Task<TokenViewModel> AuthenticateWithGoogle(string email, string loginProvider, string providerKey);
 
         Task<bool> Register(RegisterRequest request);
 
-        Task<bool> VerifyToken(string email, string token);
+        Task<bool> VerifyToken(string email, string token, string host);
 
         Task<bool> ForgotPassword(string email, string host);
 

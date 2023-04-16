@@ -11,5 +11,6 @@ namespace SShop.Domain.Entities
         public int PaymentMethodId { get; set; }
         public string PaymentMethodName { get; set; }
         public HashSet<Order> Orders { get; set; }
+        public string Image { get; set; }
     }
 }

@@ -20,6 +20,7 @@ namespace SShop.BackEndAPI.Controllers
         }
 
         [HttpGet("all")]
+        [AllowAnonymous]
         public async Task<IActionResult> RetrieveAll([FromQuery] OrderStateGetPagingRequest request)
         {
             var orderStatees = await _orderStateRepository.RetrieveAll(request);
