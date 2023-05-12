@@ -69,7 +69,6 @@ namespace SShop.BackEndAPI.Controllers
             return Ok(CustomAPIResponse<string>.Success("Revoke token for all user successfully", StatusCodes.Status200OK));
         }
 
-
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromForm] RegisterRequest request)
@@ -108,7 +107,19 @@ namespace SShop.BackEndAPI.Controllers
             {
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, status));
             }
-            return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status200OK));
+            return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status204NoContent));
+        }
+
+        [HttpPut("admin-update")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AdminUpdate([FromForm] AdminUserUpdateRequest request)
+        {
+            var res = await _userRepository.AdminUpdateUser(request);
+            if (res < 1)
+            {
+                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot update this user"));
+            }
+            return Ok(CustomAPIResponse<NoContentAPIResponse>.Success(StatusCodes.Status204NoContent));
         }
 
         [HttpDelete("delete/{userId}")]

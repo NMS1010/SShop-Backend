@@ -44,6 +44,6 @@ namespace SShop.Repositories.System.Users
 
         Task<bool> CheckUsername(string username);
 
-        UserViewModel GetUserViewModel(AppUser user);
+        Task<int> AdminUpdateUser(AdminUserUpdateRequest request);
     }
 }

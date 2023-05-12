@@ -22,6 +22,7 @@ using Microsoft.IdentityModel.Logging;
 using SShop.Utilities.Constants.Systems;
 using PayPal.Api;
 using SShop.ViewModels.System.Addresses;
+using System.ComponentModel.DataAnnotations;
 
 namespace SShop.Repositories.System.Users
 {
@@ -566,6 +567,40 @@ namespace SShop.Repositories.System.Users
         {
             var user = await _userManager.FindByNameAsync(username);
             return !(user == null);
+        }
+
+        public async Task<int> AdminUpdateUser(AdminUserUpdateRequest request)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(request.UserId) ?? throw new KeyNotFoundException("Cannot find this user");
+                user.Status = request.Status;
+                var res = await _userManager.UpdateAsync(user);
+                if (res.Succeeded)
+                {
+                    if (request.Roles == null || request.Roles[0] == "null")
+                        throw new ValidationException("Cannot read user's role");
+                    await _userManager.RemoveFromRolesAsync(user, await _userManager.GetRolesAsync(user));
+                    List<string> roles = new List<string>();
+                    foreach (var roleId in JsonConvert.DeserializeObject<string[]>(request.Roles[0]))
+                    {
+                        var role = await _context.Roles.FindAsync(roleId);
+                        if (role == null)
+                        {
+                            role = await _context.Roles.Where(x => x.Name.ToLower() == roleId.ToLower()).FirstOrDefaultAsync();
+                        }
+                        roles.Add(role.Name);
+                    }
+                    await _userManager.AddToRolesAsync(user, roles);
+
+                    return 1;
+                }
+                throw new Exception("Cannot update user");
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
         }
     }
 }
