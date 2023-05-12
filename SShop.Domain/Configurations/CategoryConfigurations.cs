@@ -25,7 +25,7 @@ namespace SShop.Domain.Configurations
                 .IsRequired();
             builder
                .Property(x => x.Content)
-               .HasMaxLength(255)
+                .HasMaxLength(int.MaxValue)
                .IsRequired(false);
 
             builder

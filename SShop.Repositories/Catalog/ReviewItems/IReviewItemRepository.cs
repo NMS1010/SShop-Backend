@@ -10,6 +10,10 @@ namespace SShop.Repositories.Catalog.ReviewItems
     {
         Task<int> ChangeReviewStatus(int reviewItemId);
 
-        Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByUser(string userId, int productId);
+        Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByUser(string userId);
+
+        Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByProduct(int productId);
+
+        Task<ReviewItemViewModel> RetrieveReviewsByOrderItem(int orderItemId);
     }
 }

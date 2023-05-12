@@ -13,7 +13,6 @@ namespace SShop.ViewModels.Catalog.DeliveryMethod
         [Required]
         public int DeliveryMethodId { get; set; }
 
-        [Required]
         public IFormFile DeliveryImage { get; set; }
     }
 }

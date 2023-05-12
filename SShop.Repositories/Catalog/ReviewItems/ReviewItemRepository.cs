@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using SShop.Utilities.Constants.Orders;
 
 namespace SShop.Repositories.Catalog.ReviewItems
 {
@@ -22,20 +23,34 @@ namespace SShop.Repositories.Catalog.ReviewItems
         {
             try
             {
+                var oi = await _context.OrderItems
+                    .Include(x => x.Order)
+                    .ThenInclude(x => x.OrderState)
+                    .Include(x => x.Product)
+                    .Where(x => x.OrderItemId == request.OrderItemId)
+                    .FirstOrDefaultAsync() ?? throw new KeyNotFoundException("Cannot find this order item");
+                if (oi.Order.OrderState.OrderStateName != ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED])
+                {
+                    throw new AccessViolationException("Order has not been deliveried");
+                }
+                if (oi.ReviewItemId.HasValue)
+                    throw new AccessViolationException("You has been rating for this product");
+
                 var review = new ReviewItem()
                 {
                     ProductId = request.ProductId,
                     UserId = request.UserId,
                     Content = request.Content,
                     Rating = request.Rating,
-                    Status = request.Status,
+                    Status = 1,
                     DateCreated = DateTime.Now,
                     DateUpdated = DateTime.Now,
                 };
-
                 _context.ReviewItems.Add(review);
                 await _context.SaveChangesAsync();
-
+                oi.ReviewItemId = review.ReviewItemId;
+                _context.OrderItems.Update(oi);
+                await _context.SaveChangesAsync();
                 return review.ReviewItemId;
             }
             catch
@@ -48,9 +63,7 @@ namespace SShop.Repositories.Catalog.ReviewItems
         {
             try
             {
-                var review = await _context.ReviewItems.FindAsync(reviewId);
-                if (review == null)
-                    return -1;
+                var review = await _context.ReviewItems.FindAsync(reviewId) ?? throw new KeyNotFoundException("Cannot find this review");
                 _context.ReviewItems.Remove(review);
 
                 return await _context.SaveChangesAsync();
@@ -78,7 +91,8 @@ namespace SShop.Repositories.Catalog.ReviewItems
                 DateUpdated = review.DateUpdated,
                 Status = review.Status,
                 UserName = review.User.UserName,
-                UserAvatar = review.User.Avatar
+                UserAvatar = review.User.Avatar,
+                State = review.Status == 1 ? "Active" : "Inactive"
             };
         }
 
@@ -172,12 +186,12 @@ namespace SShop.Repositories.Catalog.ReviewItems
             }
         }
 
-        public async Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByUser(string userId, int productId)
+        public async Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByUser(string userId)
         {
             try
             {
                 var query = await _context.ReviewItems
-                    .Where(x => x.ProductId == productId && x.UserId == userId)
+                    .Where(x => x.UserId == userId)
                     .Include(x => x.User)
                     .Include(x => x.Product)
                     .ThenInclude(x => x.ProductImages)
@@ -190,6 +204,52 @@ namespace SShop.Repositories.Catalog.ReviewItems
                     TotalItem = query.Count,
                     Items = data
                 };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<PagedResult<ReviewItemViewModel>> RetrieveReviewsByProduct(int productId)
+        {
+            try
+            {
+                var query = await _context.ReviewItems
+                    .Where(x => x.ProductId == productId)
+                    .Include(x => x.User)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .ToListAsync();
+                var data = query
+                    .Select(x => GetReviewItemViewModel(x)).ToList();
+
+                return new PagedResult<ReviewItemViewModel>
+                {
+                    TotalItem = query.Count,
+                    Items = data
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<ReviewItemViewModel> RetrieveReviewsByOrderItem(int orderItemId)
+        {
+            try
+            {
+                var ri = await _context.ReviewItems
+                    .Include(x => x.OrderItem)
+                    .Where(x => x.OrderItem.OrderItemId == orderItemId)
+                    .Include(x => x.User)
+                    .Include(x => x.Product)
+                    .ThenInclude(x => x.ProductImages)
+                    .FirstOrDefaultAsync();
+                if (ri == null)
+                    return null;
+                return GetReviewItemViewModel(ri);
             }
             catch
             {

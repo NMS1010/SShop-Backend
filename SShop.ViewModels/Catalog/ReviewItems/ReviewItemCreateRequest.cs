@@ -8,18 +8,15 @@ namespace SShop.ViewModels.Catalog.ReviewItems
         public int ProductId { get; set; }
 
         [Required]
-        public int OrderId { get; set; }
-
-        [Required]
         public string UserId { get; set; }
 
-        [MaxLength(255)]
+        [Required]
         public string Content { get; set; }
 
         [Required]
         public int Rating { get; set; }
 
         [Required]
-        public int Status { get; set; }
+        public int OrderItemId { get; set; }
     }
 }

@@ -9,23 +9,14 @@ namespace SShop.Utilities.Constants.Orders
         public const int ON_THE_WAY = 2;
         public const int DELIVERED = 3;
         public const int CANCELED = 4;
-        public const int RETURNED = 5;
 
         public static Dictionary<int, string> OrderStatus = new Dictionary<int, string>()
         {
-            {PENDING, "Đang chuẩn bị" },
-            {READY_TO_SHIP, "Sẵn sàng chuyển đi" },
-            {ON_THE_WAY, "Đang vận chuyển" },
-            {DELIVERED, "Đã hoàn thành" },
-            {CANCELED, "Đã huỷ" },
-            {RETURNED, "Hoàn trả" },
+            {PENDING, "Pending" },
+            {READY_TO_SHIP, "Ready to ship" },
+            {ON_THE_WAY, "On the way" },
+            {DELIVERED, "Delivered" },
+            {CANCELED, "Cancelled" },
         };
-
-        public static string IsCompleted(int orderStatus, int status)
-        {
-            if (orderStatus >= status)
-                return "completed";
-            return "";
-        }
     }
 }

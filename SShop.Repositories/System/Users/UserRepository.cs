@@ -520,7 +520,7 @@ namespace SShop.Repositories.System.Users
             token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
             string confirmUrl = host + $"/reset-password?token={token}&email={user.Email}";
-            string content = "<h2>Chào " + user.FirstName + " " + user.LastName + ", </h2><h3>Link xác nhận đặt lại mật khẩu cho tài khoản <em>" + user.UserName + "</em>: <a href = \"" + confirmUrl + "\">Confirm account</a> </h3>" + "<h4>Bạn vui lòng xác nhận ngay khi thấy tin nhắn này. Xin cảm ơn!!!</h4>";
+            string content = "<h2>Chào " + user.FirstName + " " + user.LastName + ", </h2><h3>Link xác nhận đặt lại mật khẩu cho tài khoản <em>" + user.UserName + "</em>: <a href = \"" + confirmUrl + "\">Change password for account</a> </h3>" + "<h4>Bạn vui lòng xác nhận ngay khi thấy tin nhắn này. Xin cảm ơn!!!</h4>";
             string title = "FurSshop - Xác nhận đặt lại mật khẩu";
 
             return await _mailJetServices.SendMail($"{user.FirstName} {user.LastName}", user.Email, content, title);

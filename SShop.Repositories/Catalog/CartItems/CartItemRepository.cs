@@ -27,6 +27,14 @@ namespace SShop.Repositories.Catalog.CartItems
                     .FirstOrDefaultAsync();
                 var currentCart = 0;
                 var isUpdateQuantity = false;
+                if (product.Status == PRODUCT_STATUS.OUT_STOCK)
+                {
+                    throw new Exception("Product is out of stock");
+                }
+                if (product.Status == PRODUCT_STATUS.SUSPENDED)
+                {
+                    throw new Exception("Product is suspended");
+                }
                 if (product.Quantity > 0)
                 {
                     if (cartItem != null)

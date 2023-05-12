@@ -71,7 +71,8 @@ namespace SShop.Repositories.Catalog.OrderItems
                 UnitPrice = orderItem.UnitPrice,
                 TotalPrice = orderItem.TotalPrice,
                 ProductBrand = orderItem.Product.Brand.BrandName,
-                ProductCategory = orderItem.Product.Category.Name
+                ProductCategory = orderItem.Product.Category.Name,
+                ReviewItemId = orderItem.ReviewItemId ?? -1,
             };
         }
 

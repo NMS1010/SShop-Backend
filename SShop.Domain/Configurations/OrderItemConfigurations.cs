@@ -24,6 +24,9 @@ namespace SShop.Domain.Configurations
                 .HasColumnType("DECIMAL")
                 .IsRequired();
             builder
+                .Property(x => x.ReviewItemId)
+                .IsRequired(false);
+            builder
                 .Property(x => x.Quantity)
                 .IsRequired();
             builder
@@ -42,6 +45,10 @@ namespace SShop.Domain.Configurations
                 .HasOne(x => x.Product)
                 .WithMany(x => x.OrderItems)
                 .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder
+                .HasOne(x => x.ReviewItem)
+                .WithOne(x => x.OrderItem)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

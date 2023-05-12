@@ -9,11 +9,11 @@ namespace SShop.BackEndAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ReviewItemsController : ControllerBase
+    public class ReviewsController : ControllerBase
     {
         private readonly IReviewItemRepository _reviewRepository;
 
-        public ReviewItemsController(IReviewItemRepository reviewRepository)
+        public ReviewsController(IReviewItemRepository reviewRepository)
         {
             _reviewRepository = reviewRepository;
         }
@@ -50,14 +50,34 @@ namespace SShop.BackEndAPI.Controllers
             return Ok(CustomAPIResponse<ReviewItemViewModel>.Success(review, StatusCodes.Status200OK));
         }
 
-        [HttpPost("get-by-user")]
-        public async Task<IActionResult> RetrieveReviewsByUser([FromForm] string userId, [FromForm] int productId)
+        [HttpGet("get-by-user")]
+        public async Task<IActionResult> RetrieveReviewsByUser([FromQuery] string userId)
         {
-            var reviews = await _reviewRepository.RetrieveReviewsByUser(userId, productId);
+            var reviews = await _reviewRepository.RetrieveReviewsByUser(userId);
 
             if (reviews == null)
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot found reviews for this productId"));
+                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot found reviews for this product"));
             return Ok(CustomAPIResponse<PagedResult<ReviewItemViewModel>>.Success(reviews, StatusCodes.Status200OK));
+        }
+
+        [HttpGet("get-by-product")]
+        public async Task<IActionResult> RetrieveReviewsByProduct([FromQuery] int productId)
+        {
+            var reviews = await _reviewRepository.RetrieveReviewsByProduct(productId);
+
+            if (reviews == null)
+                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot found reviews for this product"));
+            return Ok(CustomAPIResponse<PagedResult<ReviewItemViewModel>>.Success(reviews, StatusCodes.Status200OK));
+        }
+
+        [HttpGet("get-by-order-item")]
+        public async Task<IActionResult> RetrieveReviewsByOrderItem([FromQuery] int orderItemId)
+        {
+            var reviewItem = await _reviewRepository.RetrieveReviewsByOrderItem(orderItemId);
+
+            if (reviewItem == null)
+                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status404NotFound, "Cannot found review item"));
+            return Ok(CustomAPIResponse<ReviewItemViewModel>.Success(reviewItem, StatusCodes.Status200OK));
         }
 
         [HttpPost("add")]

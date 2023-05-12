@@ -1,4 +1,5 @@
-﻿using SShop.ViewModels.Common;
+﻿using SShop.Domain.Entities;
+using SShop.ViewModels.Common;
 using SShop.ViewModels.System.Users;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -42,5 +43,7 @@ namespace SShop.Repositories.System.Users
         Task<bool> CheckPhone(string phone);
 
         Task<bool> CheckUsername(string username);
+
+        UserViewModel GetUserViewModel(AppUser user);
     }
 }

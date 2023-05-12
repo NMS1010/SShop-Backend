@@ -41,7 +41,15 @@ namespace SShop.Repositories.Catalog.Products
                     CategoryId = request.CategoryId,
                     BrandId = request.BrandId
                 };
+                if (request.Quantity == 0)
+                {
+                    product.Status = PRODUCT_STATUS.OUT_STOCK;
+                }
 
+                if (product.Status == PRODUCT_STATUS.OUT_STOCK)
+                {
+                    product.Quantity = 0;
+                }
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
 
@@ -79,16 +87,14 @@ namespace SShop.Repositories.Catalog.Products
                 var product = await _context.Products
                     .Where(p => p.ProductId == productId)
                     .Include(c => c.ProductImages)
-                    .FirstOrDefaultAsync();
-
-                if (product == null)
-                    return -1;
+                    .FirstOrDefaultAsync() ?? throw new KeyNotFoundException("Cannot found this product");
                 product.Status = PRODUCT_STATUS.SUSPENDED;
+                product.Quantity = 0;
                 _context.Products.Update(product);
 
                 return await _context.SaveChangesAsync();
             }
-            catch (Exception e) { Console.WriteLine(e.Message); return -1; }
+            catch (Exception e) { throw e; }
         }
 
         private static string GenerateProductStatusClass(int status)
@@ -275,7 +281,14 @@ namespace SShop.Repositories.Catalog.Products
                 product.Origin = request.Origin;
                 product.BrandId = request.BrandId;
                 product.CategoryId = request.CategoryId;
-
+                if (request.Quantity == 0)
+                {
+                    product.Status = PRODUCT_STATUS.OUT_STOCK;
+                }
+                if (product.Status == PRODUCT_STATUS.OUT_STOCK)
+                {
+                    product.Quantity = 0;
+                }
                 if (request.Image != null)
                 {
                     var productImg = await _context.ProductImages

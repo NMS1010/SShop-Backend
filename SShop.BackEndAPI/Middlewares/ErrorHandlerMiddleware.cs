@@ -25,9 +25,8 @@ namespace SShop.BackEndAPI.Middlewares
                 var response = new CustomAPIResponse<NoContentAPIResponse>();
                 response.StatusCode = error switch
                 {
-                    AccessViolationException e => (int)HttpStatusCode.OK,
+                    AccessViolationException e => (int)HttpStatusCode.Forbidden,
                     KeyNotFoundException e => (int)HttpStatusCode.NotFound,
-                    ApplicationException e => (int)HttpStatusCode.BadRequest,
                     SecurityTokenException e => (int)HttpStatusCode.BadRequest,
                     UnauthorizedAccessException e => (int)HttpStatusCode.Unauthorized,
                     ValidationException e => (int)HttpStatusCode.BadRequest,

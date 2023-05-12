@@ -16,5 +16,6 @@ namespace SShop.ViewModels.Catalog.ReviewItems
         public string Content { get; set; }
         public int Rating { get; set; }
         public int Status { get; set; }
+        public string State { get; set; }
     }
 }

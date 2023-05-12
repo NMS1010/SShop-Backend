@@ -11,7 +11,6 @@ namespace SShop.ViewModels.Catalog.Categories
 
         public int? ParentCategoryId { get; set; }
 
-        [MaxLength(255)]
         public string Content { get; set; }
 
         [Required]

@@ -11,7 +11,6 @@ namespace SShop.ViewModels.Catalog.Products
         public string Name { get; set; }
 
         [Required]
-        [MaxLength(500)]
         public string Description { get; set; }
 
         [Required]

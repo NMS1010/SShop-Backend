@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SShop.Domain.EF;
 
 namespace SShop.Domain.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230417141055_modifyNVarCharField")]
+    partial class modifyNVarCharField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -563,9 +565,6 @@ namespace SShop.Domain.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ReviewItemId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("DECIMAL");
 
@@ -577,10 +576,6 @@ namespace SShop.Domain.Migrations
                     b.HasIndex("OrderId");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("ReviewItemId")
-                        .IsUnique()
-                        .HasFilter("[ReviewItemId] IS NOT NULL");
 
                     b.ToTable("OrderItem");
                 });
@@ -987,16 +982,9 @@ namespace SShop.Domain.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SShop.Domain.Entities.ReviewItem", "ReviewItem")
-                        .WithOne("OrderItem")
-                        .HasForeignKey("SShop.Domain.Entities.OrderItem", "ReviewItemId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Order");
 
                     b.Navigation("Product");
-
-                    b.Navigation("ReviewItem");
                 });
 
             modelBuilder.Entity("SShop.Domain.Entities.Product", b =>
@@ -1141,11 +1129,6 @@ namespace SShop.Domain.Migrations
             modelBuilder.Entity("SShop.Domain.Entities.Province", b =>
                 {
                     b.Navigation("Addresses");
-                });
-
-            modelBuilder.Entity("SShop.Domain.Entities.ReviewItem", b =>
-                {
-                    b.Navigation("OrderItem");
                 });
 
             modelBuilder.Entity("SShop.Domain.Entities.Ward", b =>
