@@ -27,7 +27,8 @@ namespace SShop.ViewModels.Catalog.Orders
 
         public DeliveryMethodViewModel DeliveryMethod { get; set; }
         public PaymentMethodViewModel PaymentMethod { get; set; }
-        public OrderStateViewModel OrderState { get; set; }
+        public int OrderStateId { get; set; }
+        public string OrderStateName { get; set; }
         public AddressViewModel Address { get; set; }
         public PagedResult<OrderItemViewModel> OrderItems { get; set; }
     }

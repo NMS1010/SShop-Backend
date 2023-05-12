@@ -8,6 +8,14 @@ using SShop.Repositories.Catalog.OrderItems;
 using SShop.Services.MailJet;
 using SShop.ViewModels.System.Addresses;
 using SShop.Repositories.System.Addresses;
+using SShop.ViewModels.Catalog.Statistics;
+using SShop.Repositories.System.Users;
+using System.Reflection;
+using Microsoft.AspNetCore.Components.Forms;
+using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
+using SShop.Utilities.Constants.Users;
+using SShop.ViewModels.System.Users;
 
 namespace SShop.Repositories.Catalog.Orders
 {
@@ -18,7 +26,8 @@ namespace SShop.Repositories.Catalog.Orders
         private readonly IAddressRepository _addressRepository;
         private readonly IMailJetServices _mailJetServices;
 
-        public OrderRepository(AppDbContext context, IOrderItemRepository orderItemRepository, IMailJetServices mailJetServices, IAddressRepository addressRepository)
+        public OrderRepository(AppDbContext context, IOrderItemRepository orderItemRepository, IMailJetServices mailJetServices
+            , IAddressRepository addressRepository)
         {
             _context = context;
             _orderItemRepository = orderItemRepository;
@@ -33,7 +42,7 @@ namespace SShop.Repositories.Catalog.Orders
             try
             {
                 var orderState = await _context.OrderStates
-                    .Where(x => x.OrderStateName == "Đang chuẩn bị").FirstOrDefaultAsync() ?? throw new Exception("Error while handling action");
+                    .Where(x => x.OrderStateName == "Pending").FirstOrDefaultAsync() ?? throw new Exception("Error while handling action");
                 var order = new Order()
                 {
                     UserId = request.UserId,
@@ -62,7 +71,7 @@ namespace SShop.Repositories.Catalog.Orders
                     .Include(x => x.CartItems)
                     .ThenInclude(x => x.Product)
                     .FirstOrDefaultAsync() ?? throw new Exception("Error while handling action");
-                if(user.CartItems.Where(x => x.Status == 1).ToList().Count <= 0)
+                if (user.CartItems.Where(x => x.Status == 1).ToList().Count <= 0)
                 {
                     await transaction.RollbackAsync();
                     throw new Exception("Please select your product to order");
@@ -80,7 +89,7 @@ namespace SShop.Repositories.Catalog.Orders
                         TotalPrice = cartItem.Quantity * cartItem.Product.Price,
                     };
                     var product = await _context.Products.FindAsync(cartItem.ProductId);
-                    product.Quantity -= 1;
+                    product.Quantity -= cartItem.Quantity;
                     _context.Products.Update(product);
                     _context.OrderItems.Add(orderItem);
                     _context.CartItems.Remove(cartItem);
@@ -122,42 +131,6 @@ namespace SShop.Repositories.Catalog.Orders
             }
         }
 
-        private static string GenerateOrderStatusClass(int x)
-        {
-            string s = "";
-            switch (x)
-            {
-                case ORDER_STATUS.PENDING:
-                    s = "badge badge-secondary";
-                    break;
-
-                case ORDER_STATUS.READY_TO_SHIP:
-                    s = "badge badge-warning";
-                    break;
-
-                case ORDER_STATUS.ON_THE_WAY:
-                    s = "badge badge-info";
-                    break;
-
-                case ORDER_STATUS.DELIVERED:
-                    s = "badge badge-success";
-                    break;
-
-                case ORDER_STATUS.CANCELED:
-                    s = "badge badge-danger";
-                    break;
-
-                case ORDER_STATUS.RETURNED:
-                    s = "badge badge-dark";
-                    break;
-
-                default:
-                    s = "";
-                    break;
-            }
-            return s;
-        }
-
         public OrderViewModel GetOrderViewModel(Order order)
         {
             return new OrderViewModel()
@@ -178,17 +151,16 @@ namespace SShop.Repositories.Catalog.Orders
                 {
                     DeliveryMethodId = order.DeliveryMethodId,
                     DeliveryMethodName = order.DeliveryMethod.DeliveryMethodName,
-                    DeliveryMethodPrice = order.DeliveryMethod.Price
+                    DeliveryMethodPrice = order.DeliveryMethod.Price,
+                    Image = order.DeliveryMethod?.Image,
                 },
-                OrderState = new ViewModels.Catalog.OrderState.OrderStateViewModel()
-                {
-                    OrderStateId = order.OrderStateId,
-                    OrderStateName = order.OrderState.OrderStateName
-                },
+                OrderStateId = order.OrderStateId,
+                OrderStateName = order.OrderState.OrderStateName,
                 PaymentMethod = new ViewModels.Catalog.PaymentMethod.PaymentMethodViewModel()
                 {
                     PaymentMethodId = order.PaymentMethodId,
                     PaymentMethodName = order.PaymentMethod.PaymentMethodName,
+                    Image = order.PaymentMethod.Image
                 },
                 TotalItem = order.OrderItems.Count,
                 AddressId = order.AddressId
@@ -268,17 +240,26 @@ namespace SShop.Repositories.Catalog.Orders
         {
             try
             {
-                var order = await _context.Orders.FindAsync(request.OrderId) ?? throw new KeyNotFoundException("Cannot find this order");
-                var orderState = await _context.OrderStates.FindAsync(request.OrderStateId) ?? throw new KeyNotFoundException("Cannot find this state"); ;
-                if (order.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED]
-                    && orderState.OrderStateName != ORDER_STATUS.OrderStatus[ORDER_STATUS.RETURNED])
-                    throw new Exception("This order has been deliveried, only be cancelled");
+                var order = await _context.Orders
+                    .Where(x => x.OrderId == request.OrderId)
+                    .Include(x => x.OrderState)
+                    .Include(x => x.PaymentMethod)
+                    .FirstOrDefaultAsync()
+                    ?? throw new KeyNotFoundException("Cannot find this order");
+                var orderState = await _context.OrderStates
+                    .FindAsync(request.OrderStateId)
+                    ?? throw new KeyNotFoundException("Cannot find this state"); ;
+                if (order.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED])
+                    throw new Exception("This order has been deliveried");
                 order.OrderStateId = request.OrderStateId;
-                if (orderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED] && order.PaymentMethod.PaymentMethodName == "COD")
+                if (orderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED])
                 {
                     var d = DateTime.Now;
                     order.DateDone = d;
-                    order.DatePaid = d;
+                    if (order.PaymentMethod.PaymentMethodName == "COD")
+                    {
+                        order.DatePaid = d;
+                    }
                 }
 
                 _context.Orders.Update(order);
@@ -294,22 +275,58 @@ namespace SShop.Repositories.Catalog.Orders
             }
         }
 
-        public async Task<OrderOverviewViewModel> GetOverviewStatictis()
+        private UserViewModel GetUserViewModel(AppUser user)
         {
-            //var orders = await _context.Orders.Select(x => x.Status).ToListAsync();
+            return new UserViewModel()
+            {
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email,
+                UserName = user.UserName,
+                Dob = user.DateOfBirth.ToString("yyyy-MM-dd"),
+                Gender = user.Gender,
+                Avatar = user.Avatar,
+                DateCreated = user.DateCreated.ToString(),
+                DateUpdated = user.DateUpdated.ToString(),
+                Status = user.Status,
+                TotalCartItem = user.CartItems.Count,
+                TotalWishItem = user.WishItems.Count,
+                TotalOrders = user.Orders.Count,
+                TotalBought = user.Orders.Sum(o => o.OrderItems.Sum(oi => oi.Quantity)),
+                TotalCost = user.Orders.Sum(o => o.TotalPrice),
+                StatusCode = USER_STATUS.UserStatus[user.Status],
+            };
+        }
 
-            //OrderOverviewViewModel orderOverview = new OrderOverviewViewModel()
-            //{
-            //TotalPending = orders.Where(x => x == ORDER_STATUS.PENDING).Count(),
-            //    TotalReturned = orders.Where(x => x == ORDER_STATUS.RETURNED).Count(),
-            //    TotalCanceled = orders.Where(x => x == ORDER_STATUS.CANCELED).Count(),
-            //    TotalReady = orders.Where(x => x == ORDER_STATUS.READY_TO_SHIP).Count(),
-            //    TotalCompleted = orders.Where(x => x == ORDER_STATUS.DELIVERED).Count(),
-            //    TotalDelivering = orders.Where(x => x == ORDER_STATUS.ON_THE_WAY).Count()
-            //};
+        public async Task<StatisticViewModel> GetOverviewStatictis()
+        {
+            var orders = await _context.Orders.Include(x => x.OrderState).ToListAsync();
+            var products = await _context.Products.ToListAsync();
+            var users = await _context.Users
+                .Include(x => x.Orders)
+                .ThenInclude(x => x.OrderItems)
+                .Include(x => x.CartItems)
+                .Include(x => x.WishItems)
+                .ToListAsync();
+            var totalProduct = products.Select(x => x.Quantity).Sum();
+            var topTen = users.OrderByDescending(x => x.Orders.Select(o => o.TotalPrice).Sum()).Take(10);
+            StatisticViewModel statistic = new()
+            {
+                TotalPending = orders.Where(x => x.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.PENDING]).Count(),
+                TotalCanceled = orders.Where(x => x.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.CANCELED]).Count(),
+                TotalReady = orders.Where(x => x.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.READY_TO_SHIP]).Count(),
+                TotalCompleted = orders.Where(x => x.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.DELIVERED]).Count(),
+                TotalDelivering = orders.Where(x => x.OrderState.OrderStateName == ORDER_STATUS.OrderStatus[ORDER_STATUS.ON_THE_WAY]).Count(),
+                TotalOrders = orders.Count,
+                TotalRevenue = orders.Select(x => x.TotalPrice).Sum(),
+                TotalProduct = totalProduct,
+                TotalUsers = users.Count,
+                TopTenUser = topTen.Select(x => GetUserViewModel(x)).ToList()
+            };
 
-            //return orderOverview;
-            return null;
+            return statistic;
         }
 
         public async Task<PagedResult<OrderViewModel>> RetrieveByUserId(OrderGetPagingRequest request)
@@ -357,6 +374,94 @@ namespace SShop.Repositories.Catalog.Orders
             catch
             {
                 throw new Exception("Failed to get order list");
+            }
+        }
+
+        private decimal GetMonthlyRevenue(List<Order> orderInYear, int month)
+        {
+            return orderInYear
+                .Where(x => x.DatePaid.HasValue
+                    && x.DatePaid.Value.Month == month)
+                .Select(x => x.TotalPrice)
+                .Sum();
+        }
+
+        public async Task<YearlyRevenueViewModel> GetYearlyRevenue(int year)
+        {
+            try
+            {
+                var orderInYear = await _context.Orders
+                    .Where(x => x.DatePaid.HasValue && x.DatePaid.Value.Year == year)
+                    .ToListAsync();
+                YearlyRevenueViewModel yearlyRevenue = new();
+                //{
+                //    JanTotal = GetMonthlyRevenue(orderInYear, 1),
+                //    FebTotal = GetMonthlyRevenue(orderInYear, 2),
+                //    MarTotal = GetMonthlyRevenue(orderInYear, 3),
+                //    AprTotal = GetMonthlyRevenue(orderInYear, 4),
+                //    MayTotal = GetMonthlyRevenue(orderInYear, 5),
+                //    JunTotal = GetMonthlyRevenue(orderInYear, 6),
+                //    JulTotal = GetMonthlyRevenue(orderInYear, 7),
+                //    AugTotal = GetMonthlyRevenue(orderInYear, 8),
+                //    SepTotal = GetMonthlyRevenue(orderInYear, 9),
+                //    OctTotal = GetMonthlyRevenue(orderInYear, 10),
+                //    NovTotal = GetMonthlyRevenue(orderInYear, 11),
+                //    DecTotal = GetMonthlyRevenue(orderInYear, 12)
+                //};
+                int count = 1;
+                foreach (PropertyInfo propertyInfo in yearlyRevenue.GetType().GetProperties())
+                {
+                    propertyInfo.SetValue(yearlyRevenue, GetMonthlyRevenue(orderInYear, count));
+                    count++;
+                }
+                return yearlyRevenue;
+            }
+            catch
+            {
+                throw new Exception("Failed to get statistic");
+            }
+        }
+
+        private static DateTime StartOfWeek(DateTime dt, DayOfWeek startOfWeek)
+        {
+            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
+            return dt.AddDays(-1 * diff).Date;
+        }
+
+        private decimal GeDayOfWeekRevenue(List<Order> orderInWeek, DayOfWeek dayOfWeek)
+        {
+            return orderInWeek
+                .Where(x => x.DatePaid.HasValue
+                    && x.DatePaid.Value.DayOfWeek == dayOfWeek)
+                .Select(x => x.TotalPrice)
+                .Sum();
+        }
+
+        public async Task<WeeklyRevenueViewModel> GetWeeklyRevenue(int year, int month, int day)
+        {
+            DateTime dt = new DateTime(year, month, day);
+            DateTime startDateWeek = StartOfWeek(dt, DayOfWeek.Monday);
+            try
+            {
+                var orderInWeek = await _context.Orders
+                    .Where(x => x.DatePaid.HasValue
+                            && x.DatePaid.Value >= startDateWeek && x.DatePaid < startDateWeek.AddDays(7))
+                    .ToListAsync();
+                WeeklyRevenueViewModel weeklyRevenue = new WeeklyRevenueViewModel()
+                {
+                    MonTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Monday),
+                    TueTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Tuesday),
+                    WedTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Wednesday),
+                    ThurTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Thursday),
+                    FriTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Friday),
+                    SatTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Saturday),
+                    SunTotal = GeDayOfWeekRevenue(orderInWeek, DayOfWeek.Sunday)
+                };
+                return weeklyRevenue;
+            }
+            catch
+            {
+                throw new Exception("Failed to get statistic");
             }
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using SShop.Repositories.Catalog.Orders;
 using SShop.ViewModels.Catalog.Orders;
+using SShop.ViewModels.Catalog.Statistics;
 using SShop.ViewModels.Common;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,17 +41,6 @@ namespace SShop.BackEndAPI.Controllers
             if (orders == null)
                 return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get order list"));
             return Ok(CustomAPIResponse<PagedResult<OrderViewModel>>.Success(orders, StatusCodes.Status200OK));
-        }
-
-        [HttpGet("statictis")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> RetrieveOrderOverviewStatictis()
-        {
-            var statictis = await _orderRepository.GetOverviewStatictis();
-
-            if (statictis == null)
-                return BadRequest(CustomAPIResponse<NoContentAPIResponse>.Fail(StatusCodes.Status400BadRequest, "Cannot get orders statictis overview"));
-            return Ok(CustomAPIResponse<OrderOverviewViewModel>.Success(statictis, StatusCodes.Status200OK));
         }
 
         [HttpGet("{orderId}")]
